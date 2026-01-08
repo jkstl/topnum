@@ -1,9 +1,7 @@
-@@ -1,701 +1,638 @@
 import re
 import streamlit as st
 from datetime import datetime, timedelta
 from typing import Tuple, Dict, Any, List, Optional
-
 
 from nba_api.stats.endpoints.scoreboardv2 import ScoreboardV2
 from nba_api.stats.endpoints.boxscoretraditionalv3 import BoxScoreTraditionalV3
@@ -19,76 +17,16 @@ except Exception:
         return None
 
 
-
-
-
-
-
-
 st.set_page_config(page_title="TopNum", layout="wide")
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 
 def apply_base_styles() -> None:
     st.markdown(
         """
         <style>
-
-
             .stApp {
                 background: radial-gradient(circle at top, #f8fafc 0%, #f1f5f9 55%, #e2e8f0 100%);
-
             }
-
             .block-container {
                 max-width: 1280px;
                 padding-left: 2rem;
@@ -107,7 +45,6 @@ def apply_base_styles() -> None:
                 font-size: 2rem;
                 font-weight: 700;
                 color: #0f172a;
-
                 margin: 0;
             }
             .topnum-subtitle {
@@ -118,7 +55,6 @@ def apply_base_styles() -> None:
             .topnum-meta {
                 display: flex;
                 gap: 8px;
-
                 flex-wrap: wrap;
             }
             .meta-chip {
@@ -127,7 +63,6 @@ def apply_base_styles() -> None:
                 border-radius: 999px;
                 padding: 0.35rem 0.8rem;
                 font-size: 0.78rem;
-
                 color: #475569;
                 box-shadow: 0 4px 12px rgba(15, 23, 42, 0.06);
                 display: inline-flex;
@@ -153,23 +88,6 @@ def apply_base_styles() -> None:
             .stat-card:hover {
                 transform: translateY(-4px);
                 box-shadow: 0 14px 26px rgba(15, 23, 42, 0.12);
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
             }
             .stat-label {
                 text-transform: uppercase;
@@ -177,17 +95,12 @@ def apply_base_styles() -> None:
                 letter-spacing: 1.3px;
                 color: #94a3b8;
                 font-weight: 700;
-
-
-
             }
             .stat-value {
                 font-size: 48px;
                 font-weight: 800;
                 color: #0f172a;
                 line-height: 1;
-
-
             }
             .player-row {
                 display: flex;
@@ -205,10 +118,6 @@ def apply_base_styles() -> None:
                 flex-wrap: wrap;
             }
             .player-details {
-
-
-
-
                 display: flex;
                 align-items: center;
                 gap: 12px;
@@ -225,9 +134,6 @@ def apply_base_styles() -> None:
             .record-label {
                 font-weight: 700;
                 color: #475569;
-
-
-
             }
             .record-item {
                 display: flex;
@@ -289,7 +195,6 @@ def apply_base_styles() -> None:
             .record-value {
                 color: #334155;
                 font-weight: 700;
-
             }
             .player-avatar {
                 width: 48px;
@@ -297,7 +202,6 @@ def apply_base_styles() -> None:
                 border-radius: 999px;
                 background: linear-gradient(135deg, #e2e8f0, #f8fafc);
                 display: flex;
-
                 align-items: center;
                 justify-content: center;
                 color: #0f172a;
@@ -325,11 +229,6 @@ def apply_base_styles() -> None:
                 font-size: 13px;
                 color: #0f172a;
                 font-weight: 600;
-
-
-
-
-
             }
             .game-clock {
                 font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, "Roboto Mono", "Courier New", monospace;
@@ -345,24 +244,6 @@ def apply_base_styles() -> None:
             }
             .section-subtitle {
                 color: #64748b;
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
                 font-size: 0.9rem;
                 margin-bottom: 0.8rem;
             }
@@ -469,7 +350,6 @@ def format_clock(clock_value: Optional[str]) -> str:
 def format_game_status(live_game: Optional[Dict[str, Any]]) -> str:
     if not live_game:
         return ""
-
     status_text = live_game.get("gameStatusText") or live_game.get("gameStatus") or ""
     if isinstance(status_text, str) and status_text:
         return status_text
@@ -503,11 +383,6 @@ def render_stat_card(card: Dict[str, Any]):
     status = game.get("status", "")
     display_clock = clock or status
     boxscore_url = f"https://www.nba.com/game/{card.get('game', {}).get('gameId', card.get('game', {}).get('game_id',''))}/box-score"
-
-
-
-
-
     html = f"""
     <div class='stat-card'>
         <div class='stat-label'>{statLabel}</div>
@@ -516,19 +391,10 @@ def render_stat_card(card: Dict[str, Any]):
             <div class='player-details'>
                 <div class='player-avatar'>
                         {player.get('name','')[0:1]}
-
                 </div>
                 <div>
                     <div class='player-name'>{player.get('name','—')}</div>
                     <div class='player-team'>{player.get('team','')}</div>
-
-
-
-
-
-
-
-
                 </div>
             </div>
             <div class='record-stack'>
@@ -561,7 +427,6 @@ def render_stat_card(card: Dict[str, Any]):
 
 
 
-
 def fetch_top_stats_for_date(game_date: datetime) -> Tuple[Dict[str, Dict[str, Any]], Dict[str, Any], List[Dict[str, Any]]]:
     tops = {k: {"value": None, "player": None, "team": None, "game_id": None, "game": None} for k, _ in STAT_FIELDS}
     debug = {
@@ -578,21 +443,13 @@ def fetch_top_stats_for_date(game_date: datetime) -> Tuple[Dict[str, Dict[str, A
     debug["games_found"] = len(games)
     debug["game_ids"] = [g.get("GAME_ID") for g in games if g.get("GAME_ID")]
 
-
-
-
-
-
-
     def to_float(x):
         try:
             return float(x) if x not in (None, "") else 0.0
         except Exception:
             return 0.0
 
-
     def game_for_gid(gid, live_game=None):
-
         if live_game:
             try:
                 ht = live_game.get("homeTeam", {})
@@ -608,15 +465,8 @@ def fetch_top_stats_for_date(game_date: datetime) -> Tuple[Dict[str, Dict[str, A
                 if clock and period:
                     clock = f"Q{period} {clock}"
                 elif period and not clock:
-
-
-
-
                     clock = f"Q{period}"
                 if h_abbr and a_abbr and h_pts is not None and a_pts is not None:
-
-
-
                     return {
                         "awayTeam": a_abbr,
                         "awayScore": a_pts,
@@ -627,8 +477,6 @@ def fetch_top_stats_for_date(game_date: datetime) -> Tuple[Dict[str, Dict[str, A
                     }
             except Exception:
                 pass
-
-
         try:
             ls = parse_dataset(sb.line_score)
             rows = [r for r in ls if r.get("GAME_ID") == gid]
@@ -647,19 +495,15 @@ def fetch_top_stats_for_date(game_date: datetime) -> Tuple[Dict[str, Dict[str, A
                         "clock": "",
                         "status": "",
                     }
-
-
         except Exception:
             pass
         return None
-
 
     for gid in debug["game_ids"]:
         players = []
         live_game = None
         # try live feed first
         if LiveBoxScore is not None:
-
             try:
                 live = LiveBoxScore(gid)
                 lg = live.game.get_dict() if getattr(live, "game", None) else None
@@ -691,7 +535,6 @@ def fetch_top_stats_for_date(game_date: datetime) -> Tuple[Dict[str, Dict[str, A
                 debug["boxes_failed"] += 1
                 debug["errors"].append({"game_id": gid, "error": str(e)})
                 continue
-
 
         for p in players:
             # normalize player name and team
@@ -808,26 +651,19 @@ def render(tops: Dict[str, Dict[str, Any]], last_run: datetime, meta: Dict[str, 
 
 
 def main():
-
     st_autorefresh(interval=30 * 1000, key="topnum_autorefresh")
     apply_base_styles()
-
-
     last_run = datetime.now()
     with st.spinner("Fetching live data..."):
         today = datetime.now()
         tops, debug, games = fetch_top_stats_for_date(today)
-
         has_stats = any(info.get("value") not in (None, 0) for info in tops.values())
-
-
         if not has_stats:
             yesterday = today - timedelta(days=1)
             fallback_tops, fallback_debug, fallback_games = fetch_top_stats_for_date(yesterday)
             fallback_has_stats = any(info.get("value") not in (None, 0) for info in fallback_tops.values())
             if fallback_has_stats:
                 tops, debug, games = fallback_tops, fallback_debug, fallback_games
-
                 debug["fallback_used"] = True
                 debug["fallback_date"] = fallback_debug.get("game_date")
             else:
@@ -838,35 +674,9 @@ def main():
     }
     render(tops, last_run, meta)
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
     has_stats = any(info.get("value") not in (None, 0) for info in tops.values())
-
-
-
-
     if not has_stats:
         st.info("No live stats yet. Games may be scheduled or not started. Check back at tipoff.")
-
-
-
-
-
         schedule = extract_schedule_rows(games)
         if schedule:
             st.markdown("**Tonight's schedule**")
@@ -885,31 +695,6 @@ def main():
             st.markdown("**Errors (first 5):**")
             for err in debug['errors'][:5]:
                 st.write(err)
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 
 if __name__ == "__main__":
