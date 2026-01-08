@@ -27,6 +27,11 @@ def apply_base_styles() -> None:
             .stApp {
                 background: radial-gradient(circle at top, #f8fafc 0%, #f1f5f9 55%, #e2e8f0 100%);
             }
+            .block-container {
+                max-width: 1280px;
+                padding-left: 2rem;
+                padding-right: 2rem;
+            }
             .topnum-header {
                 display: flex;
                 align-items: center;
@@ -77,6 +82,7 @@ def apply_base_styles() -> None:
                 gap: 12px;
                 min-height: 220px;
                 transition: transform 0.2s ease, box-shadow 0.2s ease;
+                width: 100%;
             }
             .stat-card:hover {
                 transform: translateY(-4px);
@@ -158,17 +164,35 @@ def apply_base_styles() -> None:
 
 
 # mapping: display name -> expected field name in live `statistics` or traditional headers
-STAT_FIELDS = {
-    "Points": "points",
-    "Rebounds": "reboundsTotal",
-    "Assists": "assists",
-    "FGM": "fieldGoalsMade",
-    "FGA": "fieldGoalsAttempted",
-    "3PM": "threePointersMade",
-    "3PA": "threePointersAttempted",
-    "Steals": "steals",
-    "Blocks": "blocks",
-}
+STAT_FIELDS = [
+    ("Points", "points"),
+    ("Rebounds", "reboundsTotal"),
+    ("Assists", "assists"),
+    ("FGM", "fieldGoalsMade"),
+    ("FGA", "fieldGoalsAttempted"),
+    ("Steals", "steals"),
+    ("3PM", "threePointersMade"),
+    ("3PA", "threePointersAttempted"),
+    ("Blocks", "blocks"),
+    ("FTM", "freeThrowsMade"),
+    ("FTA", "freeThrowsAttempted"),
+    ("Turnovers", "turnovers"),
+]
+
+STAT_DISPLAY_ORDER = [
+    "Points",
+    "Rebounds",
+    "Assists",
+    "FGM",
+    "FGA",
+    "Steals",
+    "3PM",
+    "3PA",
+    "Blocks",
+    "FTM",
+    "FTA",
+    "Turnovers",
+]
 
 # minimal team color map; unknown teams get a light gray
 TEAM_COLORS = {
@@ -270,7 +294,7 @@ def render_stat_card(card: Dict[str, Any]):
 
 
 def fetch_top_stats_for_date(game_date: datetime) -> Tuple[Dict[str, Dict[str, Any]], Dict[str, Any], List[Dict[str, Any]]]:
-    tops = {k: {"value": None, "player": None, "team": None, "game_id": None, "game": None} for k in STAT_FIELDS}
+    tops = {k: {"value": None, "player": None, "team": None, "game_id": None, "game": None} for k, _ in STAT_FIELDS}
     debug = {
         "games_found": 0,
         "game_ids": [],
@@ -391,7 +415,7 @@ def fetch_top_stats_for_date(game_date: datetime) -> Tuple[Dict[str, Dict[str, A
                     if k not in flat:
                         flat[k] = v
 
-            for disp, field in STAT_FIELDS.items():
+            for disp, field in STAT_FIELDS:
                 raw = None
                 # support multiple naming conventions
                 if field in flat:
@@ -468,7 +492,7 @@ def render(tops: Dict[str, Dict[str, Any]], last_run: datetime, meta: Dict[str, 
     )
     st.markdown("<div class='section-title'>Stat leaders</div>", unsafe_allow_html=True)
     st.markdown("<div class='section-subtitle'>Highest single-game totals currently on the board.</div>", unsafe_allow_html=True)
-    items = list(tops.items())
+    items = [(stat_name, tops.get(stat_name, {})) for stat_name in STAT_DISPLAY_ORDER]
     cols = st.columns(3)
     for i, (stat_name, info) in enumerate(items):
         col = cols[i % 3]
