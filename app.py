@@ -25,7 +25,12 @@ def apply_base_styles() -> None:
         """
         <style>
             .stApp {
-                background: #f8fafc;
+                background: radial-gradient(circle at top, #f8fafc 0%, #f1f5f9 55%, #e2e8f0 100%);
+            }
+            .block-container {
+                max-width: 1280px;
+                padding-left: 2rem;
+                padding-right: 2rem;
             }
             .topnum-header {
                 display: flex;
@@ -33,6 +38,8 @@ def apply_base_styles() -> None:
                 justify-content: space-between;
                 margin-bottom: 1.5rem;
                 padding: 0.5rem 0.2rem;
+                flex-wrap: wrap;
+                gap: 12px;
             }
             .topnum-title {
                 font-size: 2rem;
@@ -46,25 +53,41 @@ def apply_base_styles() -> None:
                 margin-top: 0.2rem;
             }
             .topnum-meta {
+                display: flex;
+                gap: 8px;
+                flex-wrap: wrap;
+            }
+            .meta-chip {
                 background: #ffffff;
                 border: 1px solid #e2e8f0;
                 border-radius: 999px;
-                padding: 0.45rem 0.9rem;
-                font-size: 0.8rem;
+                padding: 0.35rem 0.8rem;
+                font-size: 0.78rem;
                 color: #475569;
                 box-shadow: 0 4px 12px rgba(15, 23, 42, 0.06);
+                display: inline-flex;
+                align-items: center;
+                gap: 6px;
+                font-weight: 600;
             }
             .stat-card {
                 font-family: "Inter", "Roboto", -apple-system, system-ui, sans-serif;
                 background: #ffffff;
-                padding: 20px;
+                padding: 18px;
                 border-radius: 18px;
                 border: 1px solid #e2e8f0;
                 box-shadow: 0 8px 20px rgba(15, 23, 42, 0.06);
                 display: flex;
                 flex-direction: column;
-                gap: 12px;
-                min-height: 220px;
+                gap: 10px;
+                min-height: 210px;
+                height: 210px;
+                transition: transform 0.2s ease, box-shadow 0.2s ease;
+                width: 100%;
+            }
+            .stat-card:hover {
+                transform: translateY(-4px);
+                box-shadow: 0 14px 26px rgba(15, 23, 42, 0.12);
             }
             .stat-label {
                 text-transform: uppercase;
@@ -77,11 +100,45 @@ def apply_base_styles() -> None:
                 font-size: 48px;
                 font-weight: 800;
                 color: #0f172a;
+                line-height: 1;
             }
             .player-row {
                 display: flex;
+                align-items: flex-start;
+                gap: 12px;
+                justify-content: space-between;
+                flex-wrap: nowrap;
+                min-height: 56px;
+            }
+            .player-details {
+                display: flex;
                 align-items: center;
                 gap: 12px;
+            }
+            .record-stack {
+                text-align: right;
+                font-size: 11px;
+                color: #64748b;
+                line-height: 1.2;
+                display: flex;
+                flex-direction: column;
+                gap: 6px;
+                margin-left: auto;
+            }
+            .record-label {
+                font-weight: 700;
+                color: #475569;
+            }
+            .record-item {
+                display: flex;
+                flex-direction: column;
+                align-items: flex-end;
+                gap: 2px;
+                white-space: nowrap;
+            }
+            .record-value {
+                color: #334155;
+                font-weight: 700;
             }
             .player-avatar {
                 width: 48px;
@@ -93,6 +150,7 @@ def apply_base_styles() -> None:
                 justify-content: center;
                 color: #0f172a;
                 font-weight: 700;
+                font-size: 18px;
             }
             .player-name {
                 font-size: 18px;
@@ -108,10 +166,10 @@ def apply_base_styles() -> None:
                 display: inline-flex;
                 align-items: center;
                 gap: 10px;
-                padding: 8px 14px;
+                padding: 7px 12px;
                 border-radius: 999px;
                 border: 1px solid #e2e8f0;
-                background: #f8fafc;
+                background: #f9fafb;
                 font-size: 13px;
                 color: #0f172a;
                 font-weight: 600;
@@ -128,6 +186,11 @@ def apply_base_styles() -> None:
                 font-weight: 600;
                 margin: 0.5rem 0 0.2rem;
             }
+            .section-subtitle {
+                color: #64748b;
+                font-size: 0.9rem;
+                margin-bottom: 0.8rem;
+            }
         </style>
         """,
         unsafe_allow_html=True,
@@ -135,16 +198,64 @@ def apply_base_styles() -> None:
 
 
 # mapping: display name -> expected field name in live `statistics` or traditional headers
-STAT_FIELDS = {
-    "Points": "points",
-    "Rebounds": "reboundsTotal",
-    "Assists": "assists",
-    "FGM": "fieldGoalsMade",
-    "FGA": "fieldGoalsAttempted",
-    "3PM": "threePointersMade",
-    "3PA": "threePointersAttempted",
-    "Steals": "steals",
-    "Blocks": "blocks",
+STAT_FIELDS = [
+    ("Points", "points"),
+    ("Rebounds", "reboundsTotal"),
+    ("Assists", "assists"),
+    ("FGM", "fieldGoalsMade"),
+    ("FGA", "fieldGoalsAttempted"),
+    ("Steals", "steals"),
+    ("3PM", "threePointersMade"),
+    ("3PA", "threePointersAttempted"),
+    ("Blocks", "blocks"),
+    ("FTM", "freeThrowsMade"),
+    ("FTA", "freeThrowsAttempted"),
+    ("Turnovers", "turnovers"),
+]
+
+STAT_DISPLAY_ORDER = [
+    "Points",
+    "Rebounds",
+    "Assists",
+    "FGM",
+    "FGA",
+    "Steals",
+    "3PM",
+    "3PA",
+    "Blocks",
+    "FTM",
+    "FTA",
+    "Turnovers",
+]
+
+STAT_ALL_TIME = {
+    "Points": "ALL-TIME: 100 W. CHAMBERLAIN 1962",
+    "Rebounds": "ALL-TIME: 55 W. CHAMBERLAIN 1960",
+    "Assists": "ALL-TIME: 30 S. SKILES 1990",
+    "FGM": "ALL-TIME: 36 W. CHAMBERLAIN 1967",
+    "FGA": "ALL-TIME: 63 W. CHAMBERLAIN 1962",
+    "Steals": "ALL-TIME: 11 L. ROBERTSON 1986",
+    "3PM": "ALL-TIME: 14 K. THOMPSON 2018",
+    "3PA": "ALL-TIME: 24 K. THOMPSON 2018",
+    "Blocks": "ALL-TIME: 17 E. MANUTE 1985",
+    "FTM": "ALL-TIME: 28 A. ROBERTSON 1959",
+    "FTA": "ALL-TIME: 39 D. HOWARD 2013",
+    "Turnovers": "ALL-TIME: 14 J. HARDEN 2017",
+}
+
+STAT_SEASON_HIGH = {
+    "Points": "SEASON HIGH: 56 N. JOKIC",
+    "Rebounds": "SEASON HIGH: 24 D. SABONIS",
+    "Assists": "SEASON HIGH: 19 T. HALIBURTON",
+    "FGM": "SEASON HIGH: 21 L. DONCIC",
+    "FGA": "SEASON HIGH: 38 L. DONCIC",
+    "Steals": "SEASON HIGH: 8 M. THYBULLE",
+    "3PM": "SEASON HIGH: 12 S. CURRY",
+    "3PA": "SEASON HIGH: 18 S. CURRY",
+    "Blocks": "SEASON HIGH: 10 V. WEMBANYAMA",
+    "FTM": "SEASON HIGH: 20 J. EMBIID",
+    "FTA": "SEASON HIGH: 24 J. EMBIID",
+    "Turnovers": "SEASON HIGH: 9 L. JAMES",
 }
 
 # minimal team color map; unknown teams get a light gray
@@ -154,6 +265,7 @@ TEAM_COLORS = {
     "LAL": "#552583",
     "GSW": "#006BB6",
     "PHI": "#006BB6",
+    "CHI": "#CE1141",
 }
 
 
@@ -203,6 +315,7 @@ def render_stat_card(card: Dict[str, Any]):
     statValue = card.get("statValue", "—")
     player = card.get("player", {})
     game = card.get("game", {})
+    records = card.get("records", {})
 
     # colors (use TEAM_COLORS but default to muted colors)
     away_abbr = game.get("awayTeam", "")
@@ -219,12 +332,24 @@ def render_stat_card(card: Dict[str, Any]):
         <div class='stat-label'>{statLabel}</div>
         <div class='stat-value'>{statValue}</div>
         <div class='player-row'>
-            <div class='player-avatar'>
-                    {player.get('name','')[0:1]}
+            <div class='player-details'>
+                <div class='player-avatar'>
+                        {player.get('name','')[0:1]}
+                </div>
+                <div>
+                    <div class='player-name'>{player.get('name','—')}</div>
+                    <div class='player-team'>{player.get('team','')}</div>
+                </div>
             </div>
-            <div>
-                <div class='player-name'>{player.get('name','—')}</div>
-                <div class='player-team'>{player.get('team','')}</div>
+            <div class='record-stack'>
+                <div class='record-item'>
+                    <span class='record-label'>ALL-TIME</span>
+                    <span class='record-value'>{records.get('all_time','—')}</span>
+                </div>
+                <div class='record-item'>
+                    <span class='record-label'>SEASON HIGH</span>
+                    <span class='record-value'>{records.get('season_high','—')}</span>
+                </div>
             </div>
         </div>
         <div>
@@ -247,7 +372,7 @@ def render_stat_card(card: Dict[str, Any]):
 
 
 def fetch_top_stats_for_date(game_date: datetime) -> Tuple[Dict[str, Dict[str, Any]], Dict[str, Any], List[Dict[str, Any]]]:
-    tops = {k: {"value": None, "player": None, "team": None, "game_id": None, "game": None} for k in STAT_FIELDS}
+    tops = {k: {"value": None, "player": None, "team": None, "game_id": None, "game": None} for k, _ in STAT_FIELDS}
     debug = {
         "games_found": 0,
         "game_ids": [],
@@ -368,7 +493,7 @@ def fetch_top_stats_for_date(game_date: datetime) -> Tuple[Dict[str, Dict[str, A
                     if k not in flat:
                         flat[k] = v
 
-            for disp, field in STAT_FIELDS.items():
+            for disp, field in STAT_FIELDS:
                 raw = None
                 # support multiple naming conventions
                 if field in flat:
@@ -426,7 +551,7 @@ def extract_schedule_rows(games: List[Dict[str, Any]]) -> List[Dict[str, str]]:
     return rows
 
 
-def render(tops: Dict[str, Dict[str, Any]], last_run: datetime):
+def render(tops: Dict[str, Dict[str, Any]], last_run: datetime, meta: Dict[str, Any]):
     st.markdown(
         f"""
         <div class='topnum-header'>
@@ -434,13 +559,18 @@ def render(tops: Dict[str, Dict[str, Any]], last_run: datetime):
                 <div class='topnum-title'>TopNum</div>
                 <div class='topnum-subtitle'>Live leaders across tonight's games</div>
             </div>
-            <div class='topnum-meta'>Updated {last_run.strftime('%H:%M:%S')} local</div>
+            <div class='topnum-meta'>
+                <span class='meta-chip'>🕒 Updated {last_run.strftime('%H:%M:%S')} local</span>
+                <span class='meta-chip'>📅 Data date {meta.get('data_date')}</span>
+                <span class='meta-chip'>🏀 Games tracked {meta.get('game_count')}</span>
+            </div>
         </div>
         """,
         unsafe_allow_html=True,
     )
     st.markdown("<div class='section-title'>Stat leaders</div>", unsafe_allow_html=True)
-    items = list(tops.items())
+    st.markdown("<div class='section-subtitle'>Highest single-game totals currently on the board.</div>", unsafe_allow_html=True)
+    items = [(stat_name, tops.get(stat_name, {})) for stat_name in STAT_DISPLAY_ORDER]
     cols = st.columns(3)
     for i, (stat_name, info) in enumerate(items):
         col = cols[i % 3]
@@ -453,6 +583,10 @@ def render(tops: Dict[str, Dict[str, Any]], last_run: datetime):
                 "statValue": display_val,
                 "player": {"name": info.get("player") or "—", "team": info.get("team") or ""},
                 "game": info.get("game") or {},
+                "records": {
+                    "all_time": STAT_ALL_TIME.get(stat_name, "—").replace("ALL-TIME:", "").strip(),
+                    "season_high": STAT_SEASON_HIGH.get(stat_name, "—").replace("SEASON HIGH:", "").strip(),
+                },
             }
             if not card["game"]:
                 card["game"] = {"awayTeam": "", "awayScore": "", "homeTeam": "", "homeScore": "", "clock": "", "game_id": info.get("game_id")}
@@ -478,7 +612,11 @@ def main():
                 debug["fallback_date"] = fallback_debug.get("game_date")
             else:
                 debug["fallback_used"] = False
-    render(tops, last_run)
+    meta = {
+        "data_date": debug.get("fallback_date") or debug.get("game_date"),
+        "game_count": debug.get("games_found", 0),
+    }
+    render(tops, last_run, meta)
 
     has_stats = any(info.get("value") not in (None, 0) for info in tops.values())
     if not has_stats:
