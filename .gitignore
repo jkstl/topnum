@@ -1,0 +1,9 @@
+venv/
+.venv/
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+env/
+vendor/nba_api/__pycache__/
+vendor/nba_api/*.pyc
