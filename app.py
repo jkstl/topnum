@@ -33,13 +33,12 @@ def apply_base_styles() -> None:
                 padding-right: 2rem;
             }
             .topnum-header {
-                display: flex;
+                display: grid;
+                grid-template-columns: minmax(260px, 1fr) auto;
                 align-items: center;
-                justify-content: space-between;
                 margin-bottom: 1.5rem;
                 padding: 0.5rem 0.2rem;
-                flex-wrap: wrap;
-                gap: 12px;
+                gap: 16px;
             }
             .topnum-title {
                 font-size: 2rem;
@@ -56,19 +55,22 @@ def apply_base_styles() -> None:
                 display: flex;
                 gap: 8px;
                 flex-wrap: wrap;
+                justify-content: flex-end;
             }
             .meta-chip {
                 background: #ffffff;
                 border: 1px solid #e2e8f0;
                 border-radius: 999px;
-                padding: 0.35rem 0.8rem;
-                font-size: 0.78rem;
+                padding: 0.3rem 0.65rem;
+                font-size: 0.72rem;
                 color: #475569;
                 box-shadow: 0 4px 12px rgba(15, 23, 42, 0.06);
                 display: inline-flex;
                 align-items: center;
                 gap: 6px;
                 font-weight: 600;
+                max-width: 200px;
+                white-space: nowrap;
             }
             .stat-card {
                 font-family: "Inter", "Roboto", -apple-system, system-ui, sans-serif;
@@ -93,6 +95,11 @@ def apply_base_styles() -> None:
             .stat-card:hover {
                 transform: translateY(-4px);
                 box-shadow: 0 14px 26px rgba(15, 23, 42, 0.12);
+            }
+            .stat-grid {
+                display: grid;
+                grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+                gap: 16px;
             }
             .stat-label {
                 text-transform: uppercase;
@@ -135,10 +142,23 @@ def apply_base_styles() -> None:
                 gap: 6px;
                 margin-left: auto;
                 grid-area: records;
+                background: #f8fafc;
+                border-radius: 12px;
+                padding: 8px 10px;
+                border: 1px solid #e2e8f0;
+            }
+            .record-header {
+                font-size: 10px;
+                letter-spacing: 0.12em;
+                text-transform: uppercase;
+                color: #94a3b8;
+                font-weight: 700;
             }
             .record-label {
                 font-weight: 700;
                 color: #475569;
+                font-size: 10px;
+                letter-spacing: 0.08em;
             }
             .record-item {
                 display: flex;
@@ -150,6 +170,7 @@ def apply_base_styles() -> None:
             .record-value {
                 color: #334155;
                 font-weight: 700;
+                font-size: 12px;
             }
             .player-avatar {
                 width: 48px;
@@ -207,6 +228,11 @@ def apply_base_styles() -> None:
                 color: #94a3b8;
                 margin-top: 0;
             }
+            .probability-note {
+                font-size: 11px;
+                color: #94a3b8;
+                font-weight: 600;
+            }
             .section-title {
                 font-size: 1.2rem;
                 color: #0f172a;
@@ -217,6 +243,14 @@ def apply_base_styles() -> None:
                 color: #64748b;
                 font-size: 0.9rem;
                 margin-bottom: 0.8rem;
+            }
+            @media (max-width: 900px) {
+                .topnum-header {
+                    grid-template-columns: 1fr;
+                }
+                .topnum-meta {
+                    justify-content: flex-start;
+                }
             }
         </style>
         """,
@@ -369,6 +403,7 @@ def render_stat_card(card: Dict[str, Any]):
                 </div>
             </div>
             <div class='record-stack'>
+                <div class='record-header'>Records</div>
                 <div class='record-item'>
                     <span class='record-label'>ALL-TIME</span>
                     <span class='record-value'>{records.get('all_time','—')}</span>
@@ -390,6 +425,7 @@ def render_stat_card(card: Dict[str, Any]):
                 </div>
             </a>
             <div class='game-clock'>{display_clock}</div>
+            <div class='probability-note'>Est. odds coming soon</div>
         </div>
     </div>
     """
@@ -596,29 +632,31 @@ def render(tops: Dict[str, Dict[str, Any]], last_run: datetime, meta: Dict[str, 
         unsafe_allow_html=True,
     )
     st.markdown("<div class='section-title'>Stat leaders</div>", unsafe_allow_html=True)
-    st.markdown("<div class='section-subtitle'>Highest single-game totals currently on the board.</div>", unsafe_allow_html=True)
+    st.markdown(
+        "<div class='section-subtitle'>Highest single-game totals currently on the board, alongside season and all-time marks.</div>",
+        unsafe_allow_html=True,
+    )
     items = [(stat_name, tops.get(stat_name, {})) for stat_name in STAT_DISPLAY_ORDER]
-    cols = st.columns(3)
+    st.markdown("<div class='stat-grid'>", unsafe_allow_html=True)
     for i, (stat_name, info) in enumerate(items):
-        col = cols[i % 3]
-        with col:
-            # Build card data
-            val = info.get("value")
-            display_val = int(val) if (isinstance(val, (int, float)) and float(val).is_integer()) else (round(float(val), 1) if val is not None else "—")
-            card = {
-                "statLabel": stat_name,
-                "statValue": display_val,
-                "player": {"name": info.get("player") or "—", "team": info.get("team") or ""},
-                "game": info.get("game") or {},
-                "records": {
-                    "all_time": STAT_ALL_TIME.get(stat_name, "—").replace("ALL-TIME:", "").strip(),
-                    "season_high": STAT_SEASON_HIGH.get(stat_name, "—").replace("SEASON HIGH:", "").strip(),
-                },
-            }
-            if not card["game"]:
-                card["game"] = {"awayTeam": "", "awayScore": "", "homeTeam": "", "homeScore": "", "clock": "", "game_id": info.get("game_id")}
+        # Build card data
+        val = info.get("value")
+        display_val = int(val) if (isinstance(val, (int, float)) and float(val).is_integer()) else (round(float(val), 1) if val is not None else "—")
+        card = {
+            "statLabel": stat_name,
+            "statValue": display_val,
+            "player": {"name": info.get("player") or "—", "team": info.get("team") or ""},
+            "game": info.get("game") or {},
+            "records": {
+                "all_time": STAT_ALL_TIME.get(stat_name, "—").replace("ALL-TIME:", "").strip(),
+                "season_high": STAT_SEASON_HIGH.get(stat_name, "—").replace("SEASON HIGH:", "").strip(),
+            },
+        }
+        if not card["game"]:
+            card["game"] = {"awayTeam": "", "awayScore": "", "homeTeam": "", "homeScore": "", "clock": "", "game_id": info.get("game_id")}
 
-            render_stat_card(card)
+        render_stat_card(card)
+    st.markdown("</div>", unsafe_allow_html=True)
 
 
 def main():
