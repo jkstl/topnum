@@ -103,6 +103,13 @@ def apply_base_styles() -> None:
             }
             .player-row {
                 display: flex;
+                align-items: flex-start;
+                gap: 12px;
+                justify-content: space-between;
+                flex-wrap: nowrap;
+            }
+            .player-details {
+                display: flex;
                 align-items: center;
                 gap: 12px;
                 justify-content: space-between;
@@ -136,6 +143,31 @@ def apply_base_styles() -> None:
             .record-value {
                 color: #334155;
                 font-weight: 600;
+            }
+            .record-stack {
+                text-align: right;
+                font-size: 11px;
+                color: #64748b;
+                line-height: 1.2;
+                display: flex;
+                flex-direction: column;
+                gap: 6px;
+                margin-left: auto;
+            }
+            .record-label {
+                font-weight: 700;
+                color: #475569;
+            }
+            .record-item {
+                display: flex;
+                flex-direction: column;
+                align-items: flex-end;
+                gap: 2px;
+                white-space: nowrap;
+            }
+            .record-value {
+                color: #334155;
+                font-weight: 700;
             }
             .player-avatar {
                 width: 48px;
