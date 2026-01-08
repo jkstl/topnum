@@ -246,7 +246,7 @@ def render_stat_card(card: Dict[str, Any]):
 
 
 
-def fetch_top_stats() -> Tuple[Dict[str, Dict[str, Any]], Dict[str, Any]]:
+def fetch_top_stats() -> Tuple[Dict[str, Dict[str, Any]], Dict[str, Any], List[Dict[str, Any]]]:
     tops = {k: {"value": None, "player": None, "team": None, "game_id": None, "game": None} for k in STAT_FIELDS}
     debug = {"games_found": 0, "game_ids": [], "boxes_ok": 0, "boxes_failed": 0, "errors": []}
 
@@ -401,7 +401,22 @@ def fetch_top_stats() -> Tuple[Dict[str, Dict[str, Any]], Dict[str, Any]]:
     except Exception:
         pass
 
-    return tops, debug
+    return tops, debug, games
+
+
+def extract_schedule_rows(games: List[Dict[str, Any]]) -> List[Dict[str, str]]:
+    rows = []
+    for game in games:
+        away = game.get("VISITOR_TEAM_ABBREVIATION") or game.get("VISITOR_TEAM_NAME") or ""
+        home = game.get("HOME_TEAM_ABBREVIATION") or game.get("HOME_TEAM_NAME") or ""
+        status = game.get("GAME_STATUS_TEXT") or ""
+        rows.append(
+            {
+                "Matchup": f"{away} @ {home}".strip(),
+                "Status": status,
+            }
+        )
+    return rows
 
 
 def render(tops: Dict[str, Dict[str, Any]], last_run: datetime):
@@ -443,8 +458,18 @@ def main():
     apply_base_styles()
     last_run = datetime.now()
     with st.spinner("Fetching live data..."):
-        tops, debug = fetch_top_stats()
+        tops, debug, games = fetch_top_stats()
     render(tops, last_run)
+
+    has_stats = any(
+        info.get("value") not in (None, 0) for info in tops.values()
+    )
+    if not has_stats:
+        st.info("No live stats yet. Games may be scheduled or not started. Check back at tipoff.")
+        schedule = extract_schedule_rows(games)
+        if schedule:
+            st.markdown("**Tonight's schedule**")
+            st.table(schedule)
 
     with st.expander("Debug / fetch details"):
         st.write(f"Games found: {debug['games_found']}")
