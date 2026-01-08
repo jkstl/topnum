@@ -118,9 +118,9 @@ def apply_base_styles() -> None:
                 font-size: 12px;
                 color: #64748b;
                 line-height: 1.2;
-                display: grid;
-                grid-template-columns: repeat(2, minmax(0, auto));
-                gap: 8px 18px;
+                display: flex;
+                flex-direction: column;
+                gap: 6px;
             }
             .record-label {
                 font-weight: 700;
