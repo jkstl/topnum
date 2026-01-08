@@ -77,9 +77,14 @@ def apply_base_styles() -> None:
                 border-radius: 18px;
                 border: 1px solid #e2e8f0;
                 box-shadow: 0 8px 20px rgba(15, 23, 42, 0.06);
-                display: flex;
-                flex-direction: column;
-                gap: 10px;
+                display: grid;
+                grid-template-rows: auto auto 1fr auto;
+                grid-template-areas:
+                    "label"
+                    "value"
+                    "player"
+                    "game";
+                gap: 12px;
                 min-height: 210px;
                 height: 210px;
                 transition: transform 0.2s ease, box-shadow 0.2s ease;
@@ -95,56 +100,30 @@ def apply_base_styles() -> None:
                 letter-spacing: 1.3px;
                 color: #94a3b8;
                 font-weight: 700;
+                grid-area: label;
             }
             .stat-value {
                 font-size: 48px;
                 font-weight: 800;
                 color: #0f172a;
                 line-height: 1;
+                grid-area: value;
             }
-            .player-row {
-                display: flex;
-                align-items: flex-start;
+            .player-records {
+                grid-area: player;
+                display: grid;
+                grid-template-columns: minmax(0, 1fr) auto;
+                grid-template-areas: "player records";
+                align-items: start;
                 gap: 12px;
-                justify-content: space-between;
-                flex-wrap: nowrap;
                 min-height: 56px;
             }
             .player-details {
                 display: flex;
                 align-items: center;
                 gap: 12px;
-                justify-content: space-between;
-                flex-wrap: wrap;
-            }
-            .player-details {
-                display: flex;
-                align-items: center;
-                gap: 12px;
-            }
-            .record-stack {
-                text-align: right;
-                font-size: 12px;
-                color: #64748b;
-                line-height: 1.2;
-                display: flex;
-                flex-direction: column;
-                gap: 6px;
-            }
-            .record-label {
-                font-weight: 700;
-                color: #475569;
-            }
-            .record-item {
-                display: flex;
-                flex-direction: column;
-                align-items: flex-end;
-                gap: 2px;
-                white-space: nowrap;
-            }
-            .record-value {
-                color: #334155;
-                font-weight: 600;
+                min-width: 0;
+                grid-area: player;
             }
             .record-stack {
                 text-align: right;
@@ -155,31 +134,7 @@ def apply_base_styles() -> None:
                 flex-direction: column;
                 gap: 6px;
                 margin-left: auto;
-            }
-            .record-label {
-                font-weight: 700;
-                color: #475569;
-            }
-            .record-item {
-                display: flex;
-                flex-direction: column;
-                align-items: flex-end;
-                gap: 2px;
-                white-space: nowrap;
-            }
-            .record-value {
-                color: #334155;
-                font-weight: 700;
-            }
-            .record-stack {
-                text-align: right;
-                font-size: 11px;
-                color: #64748b;
-                line-height: 1.2;
-                display: flex;
-                flex-direction: column;
-                gap: 6px;
-                margin-left: auto;
+                grid-area: records;
             }
             .record-label {
                 font-weight: 700;
@@ -208,15 +163,31 @@ def apply_base_styles() -> None:
                 font-weight: 700;
                 font-size: 18px;
             }
+            .player-info {
+                min-width: 0;
+            }
             .player-name {
                 font-size: 18px;
                 font-weight: 600;
                 color: #0f172a;
+                max-width: 180px;
+                white-space: nowrap;
+                overflow: hidden;
+                text-overflow: ellipsis;
             }
             .player-team {
                 color: #64748b;
                 font-size: 13px;
                 margin-top: 2px;
+            }
+            .game-block {
+                grid-area: game;
+                display: flex;
+                flex-direction: column;
+                align-items: flex-start;
+                justify-content: flex-end;
+                gap: 6px;
+                margin-top: auto;
             }
             .game-pill {
                 display: inline-flex;
@@ -234,7 +205,7 @@ def apply_base_styles() -> None:
                 font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, "Roboto Mono", "Courier New", monospace;
                 font-size: 12px;
                 color: #94a3b8;
-                margin-top: 6px;
+                margin-top: 0;
             }
             .section-title {
                 font-size: 1.2rem;
@@ -387,12 +358,12 @@ def render_stat_card(card: Dict[str, Any]):
     <div class='stat-card'>
         <div class='stat-label'>{statLabel}</div>
         <div class='stat-value'>{statValue}</div>
-        <div class='player-row'>
+        <div class='player-records'>
             <div class='player-details'>
                 <div class='player-avatar'>
                         {player.get('name','')[0:1]}
                 </div>
-                <div>
+                <div class='player-info'>
                     <div class='player-name'>{player.get('name','—')}</div>
                     <div class='player-team'>{player.get('team','')}</div>
                 </div>
@@ -408,7 +379,7 @@ def render_stat_card(card: Dict[str, Any]):
                 </div>
             </div>
         </div>
-        <div>
+        <div class='game-block'>
             <a href='{boxscore_url}' target='_blank' style='text-decoration:none;'>
                 <div class='game-pill'>
                     <span style='color:{away_color}; font-weight:700'>{away_abbr}</span>
