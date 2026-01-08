@@ -25,7 +25,7 @@ def apply_base_styles() -> None:
         """
         <style>
             .stApp {
-                background: #f8fafc;
+                background: radial-gradient(circle at top, #f8fafc 0%, #f1f5f9 55%, #e2e8f0 100%);
             }
             .topnum-header {
                 display: flex;
@@ -33,6 +33,8 @@ def apply_base_styles() -> None:
                 justify-content: space-between;
                 margin-bottom: 1.5rem;
                 padding: 0.5rem 0.2rem;
+                flex-wrap: wrap;
+                gap: 12px;
             }
             .topnum-title {
                 font-size: 2rem;
@@ -46,13 +48,22 @@ def apply_base_styles() -> None:
                 margin-top: 0.2rem;
             }
             .topnum-meta {
+                display: flex;
+                gap: 8px;
+                flex-wrap: wrap;
+            }
+            .meta-chip {
                 background: #ffffff;
                 border: 1px solid #e2e8f0;
                 border-radius: 999px;
-                padding: 0.45rem 0.9rem;
-                font-size: 0.8rem;
+                padding: 0.35rem 0.8rem;
+                font-size: 0.78rem;
                 color: #475569;
                 box-shadow: 0 4px 12px rgba(15, 23, 42, 0.06);
+                display: inline-flex;
+                align-items: center;
+                gap: 6px;
+                font-weight: 600;
             }
             .stat-card {
                 font-family: "Inter", "Roboto", -apple-system, system-ui, sans-serif;
@@ -65,6 +76,11 @@ def apply_base_styles() -> None:
                 flex-direction: column;
                 gap: 12px;
                 min-height: 220px;
+                transition: transform 0.2s ease, box-shadow 0.2s ease;
+            }
+            .stat-card:hover {
+                transform: translateY(-4px);
+                box-shadow: 0 14px 26px rgba(15, 23, 42, 0.12);
             }
             .stat-label {
                 text-transform: uppercase;
@@ -77,6 +93,7 @@ def apply_base_styles() -> None:
                 font-size: 48px;
                 font-weight: 800;
                 color: #0f172a;
+                line-height: 1;
             }
             .player-row {
                 display: flex;
@@ -93,6 +110,7 @@ def apply_base_styles() -> None:
                 justify-content: center;
                 color: #0f172a;
                 font-weight: 700;
+                font-size: 18px;
             }
             .player-name {
                 font-size: 18px;
@@ -127,6 +145,11 @@ def apply_base_styles() -> None:
                 color: #0f172a;
                 font-weight: 600;
                 margin: 0.5rem 0 0.2rem;
+            }
+            .section-subtitle {
+                color: #64748b;
+                font-size: 0.9rem;
+                margin-bottom: 0.8rem;
             }
         </style>
         """,
@@ -426,7 +449,7 @@ def extract_schedule_rows(games: List[Dict[str, Any]]) -> List[Dict[str, str]]:
     return rows
 
 
-def render(tops: Dict[str, Dict[str, Any]], last_run: datetime):
+def render(tops: Dict[str, Dict[str, Any]], last_run: datetime, meta: Dict[str, Any]):
     st.markdown(
         f"""
         <div class='topnum-header'>
@@ -434,12 +457,17 @@ def render(tops: Dict[str, Dict[str, Any]], last_run: datetime):
                 <div class='topnum-title'>TopNum</div>
                 <div class='topnum-subtitle'>Live leaders across tonight's games</div>
             </div>
-            <div class='topnum-meta'>Updated {last_run.strftime('%H:%M:%S')} local</div>
+            <div class='topnum-meta'>
+                <span class='meta-chip'>🕒 Updated {last_run.strftime('%H:%M:%S')} local</span>
+                <span class='meta-chip'>📅 Data date {meta.get('data_date')}</span>
+                <span class='meta-chip'>🏀 Games tracked {meta.get('game_count')}</span>
+            </div>
         </div>
         """,
         unsafe_allow_html=True,
     )
     st.markdown("<div class='section-title'>Stat leaders</div>", unsafe_allow_html=True)
+    st.markdown("<div class='section-subtitle'>Highest single-game totals currently on the board.</div>", unsafe_allow_html=True)
     items = list(tops.items())
     cols = st.columns(3)
     for i, (stat_name, info) in enumerate(items):
@@ -478,7 +506,11 @@ def main():
                 debug["fallback_date"] = fallback_debug.get("game_date")
             else:
                 debug["fallback_used"] = False
-    render(tops, last_run)
+    meta = {
+        "data_date": debug.get("fallback_date") or debug.get("game_date"),
+        "game_count": debug.get("games_found", 0),
+    }
+    render(tops, last_run, meta)
 
     has_stats = any(info.get("value") not in (None, 0) for info in tops.values())
     if not has_stats:
