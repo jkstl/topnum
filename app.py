@@ -105,6 +105,22 @@ def apply_base_styles() -> None:
                 display: flex;
                 align-items: center;
                 gap: 12px;
+                justify-content: space-between;
+            }
+            .player-details {
+                display: flex;
+                align-items: center;
+                gap: 12px;
+            }
+            .record-stack {
+                text-align: right;
+                font-size: 12px;
+                color: #64748b;
+                line-height: 1.3;
+            }
+            .record-label {
+                font-weight: 700;
+                color: #475569;
             }
             .player-avatar {
                 width: 48px;
@@ -194,6 +210,36 @@ STAT_DISPLAY_ORDER = [
     "Turnovers",
 ]
 
+STAT_ALL_TIME = {
+    "Points": "ALL-TIME: 100 W. CHAMBERLAIN 1962",
+    "Rebounds": "ALL-TIME: 55 W. CHAMBERLAIN 1960",
+    "Assists": "ALL-TIME: 30 S. SKILES 1990",
+    "FGM": "ALL-TIME: 36 W. CHAMBERLAIN 1967",
+    "FGA": "ALL-TIME: 63 W. CHAMBERLAIN 1962",
+    "Steals": "ALL-TIME: 11 L. ROBERTSON 1986",
+    "3PM": "ALL-TIME: 14 K. THOMPSON 2018",
+    "3PA": "ALL-TIME: 24 K. THOMPSON 2018",
+    "Blocks": "ALL-TIME: 17 E. MANUTE 1985",
+    "FTM": "ALL-TIME: 28 A. ROBERTSON 1959",
+    "FTA": "ALL-TIME: 39 D. HOWARD 2013",
+    "Turnovers": "ALL-TIME: 14 J. HARDEN 2017",
+}
+
+STAT_SEASON_HIGH = {
+    "Points": "SEASON HIGH: 56 N. JOKIC",
+    "Rebounds": "SEASON HIGH: 24 D. SABONIS",
+    "Assists": "SEASON HIGH: 19 T. HALIBURTON",
+    "FGM": "SEASON HIGH: 21 L. DONCIC",
+    "FGA": "SEASON HIGH: 38 L. DONCIC",
+    "Steals": "SEASON HIGH: 8 M. THYBULLE",
+    "3PM": "SEASON HIGH: 12 S. CURRY",
+    "3PA": "SEASON HIGH: 18 S. CURRY",
+    "Blocks": "SEASON HIGH: 10 V. WEMBANYAMA",
+    "FTM": "SEASON HIGH: 20 J. EMBIID",
+    "FTA": "SEASON HIGH: 24 J. EMBIID",
+    "Turnovers": "SEASON HIGH: 9 L. JAMES",
+}
+
 # minimal team color map; unknown teams get a light gray
 TEAM_COLORS = {
     # examples; add more if desired
@@ -250,6 +296,7 @@ def render_stat_card(card: Dict[str, Any]):
     statValue = card.get("statValue", "—")
     player = card.get("player", {})
     game = card.get("game", {})
+    records = card.get("records", {})
 
     # colors (use TEAM_COLORS but default to muted colors)
     away_abbr = game.get("awayTeam", "")
@@ -266,12 +313,18 @@ def render_stat_card(card: Dict[str, Any]):
         <div class='stat-label'>{statLabel}</div>
         <div class='stat-value'>{statValue}</div>
         <div class='player-row'>
-            <div class='player-avatar'>
-                    {player.get('name','')[0:1]}
+            <div class='player-details'>
+                <div class='player-avatar'>
+                        {player.get('name','')[0:1]}
+                </div>
+                <div>
+                    <div class='player-name'>{player.get('name','—')}</div>
+                    <div class='player-team'>{player.get('team','')}</div>
+                </div>
             </div>
-            <div>
-                <div class='player-name'>{player.get('name','—')}</div>
-                <div class='player-team'>{player.get('team','')}</div>
+            <div class='record-stack'>
+                <div><span class='record-label'>ALL-TIME:</span> {records.get('all_time','—')}</div>
+                <div><span class='record-label'>SEASON HIGH:</span> {records.get('season_high','—')}</div>
             </div>
         </div>
         <div>
@@ -505,6 +558,10 @@ def render(tops: Dict[str, Dict[str, Any]], last_run: datetime, meta: Dict[str, 
                 "statValue": display_val,
                 "player": {"name": info.get("player") or "—", "team": info.get("team") or ""},
                 "game": info.get("game") or {},
+                "records": {
+                    "all_time": STAT_ALL_TIME.get(stat_name, "—").replace("ALL-TIME:", "").strip(),
+                    "season_high": STAT_SEASON_HIGH.get(stat_name, "—").replace("SEASON HIGH:", "").strip(),
+                },
             }
             if not card["game"]:
                 card["game"] = {"awayTeam": "", "awayScore": "", "homeTeam": "", "homeScore": "", "clock": "", "game_id": info.get("game_id")}
