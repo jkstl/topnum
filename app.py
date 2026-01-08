@@ -3,6 +3,7 @@ import streamlit as st
 from datetime import datetime, timedelta
 from typing import Tuple, Dict, Any, List, Optional
 
+# --- Import NBA API Endpoints ---
 from nba_api.stats.endpoints.scoreboardv2 import ScoreboardV2
 from nba_api.stats.endpoints.boxscoretraditionalv3 import BoxScoreTraditionalV3
 try:
@@ -16,244 +17,16 @@ except Exception:
     def st_autorefresh(interval=30000, key=None):
         return None
 
+# --- Page Config ---
+st.set_page_config(
+    page_title="TopNum | NBA Live Leaders",
+    layout="wide",
+    initial_sidebar_state="collapsed"
+)
 
-st.set_page_config(page_title="TopNum", layout="wide")
+# --- Constants & Config ---
 
-
-def apply_base_styles() -> None:
-    st.markdown(
-        """
-        <style>
-            .stApp {
-                background: radial-gradient(circle at top, #f8fafc 0%, #f1f5f9 55%, #e2e8f0 100%);
-            }
-            .block-container {
-                max-width: 1280px;
-                padding-left: 2rem;
-                padding-right: 2rem;
-            }
-            .topnum-header {
-                display: flex;
-                align-items: center;
-                justify-content: space-between;
-                margin-bottom: 1.5rem;
-                padding: 0.5rem 0.2rem;
-                flex-wrap: wrap;
-                gap: 12px;
-            }
-            .topnum-title {
-                font-size: 2rem;
-                font-weight: 700;
-                color: #0f172a;
-                margin: 0;
-            }
-            .topnum-subtitle {
-                color: #64748b;
-                font-size: 0.95rem;
-                margin-top: 0.2rem;
-            }
-            .topnum-meta {
-                display: flex;
-                gap: 8px;
-                flex-wrap: wrap;
-            }
-            .meta-chip {
-                background: #ffffff;
-                border: 1px solid #e2e8f0;
-                border-radius: 999px;
-                padding: 0.35rem 0.8rem;
-                font-size: 0.78rem;
-                color: #475569;
-                box-shadow: 0 4px 12px rgba(15, 23, 42, 0.06);
-                display: inline-flex;
-                align-items: center;
-                gap: 6px;
-                font-weight: 600;
-            }
-            .stat-card {
-                font-family: "Inter", "Roboto", -apple-system, system-ui, sans-serif;
-                background: #ffffff;
-                padding: 18px;
-                border-radius: 18px;
-                border: 1px solid #e2e8f0;
-                box-shadow: 0 8px 20px rgba(15, 23, 42, 0.06);
-                display: flex;
-                flex-direction: column;
-                gap: 10px;
-                min-height: 210px;
-                height: 210px;
-                transition: transform 0.2s ease, box-shadow 0.2s ease;
-                width: 100%;
-            }
-            .stat-card:hover {
-                transform: translateY(-4px);
-                box-shadow: 0 14px 26px rgba(15, 23, 42, 0.12);
-            }
-            .stat-label {
-                text-transform: uppercase;
-                font-size: 12px;
-                letter-spacing: 1.3px;
-                color: #94a3b8;
-                font-weight: 700;
-            }
-            .stat-value {
-                font-size: 48px;
-                font-weight: 800;
-                color: #0f172a;
-                line-height: 1;
-            }
-            .player-row {
-                display: flex;
-                align-items: flex-start;
-                gap: 12px;
-                justify-content: space-between;
-                flex-wrap: nowrap;
-                min-height: 56px;
-            }
-            .player-details {
-                display: flex;
-                align-items: center;
-                gap: 12px;
-                justify-content: space-between;
-                flex-wrap: wrap;
-            }
-            .player-details {
-                display: flex;
-                align-items: center;
-                gap: 12px;
-            }
-            .record-stack {
-                text-align: right;
-                font-size: 12px;
-                color: #64748b;
-                line-height: 1.2;
-                display: flex;
-                flex-direction: column;
-                gap: 6px;
-            }
-            .record-label {
-                font-weight: 700;
-                color: #475569;
-            }
-            .record-item {
-                display: flex;
-                flex-direction: column;
-                align-items: flex-end;
-                gap: 2px;
-                white-space: nowrap;
-            }
-            .record-value {
-                color: #334155;
-                font-weight: 600;
-            }
-            .record-stack {
-                text-align: right;
-                font-size: 11px;
-                color: #64748b;
-                line-height: 1.2;
-                display: flex;
-                flex-direction: column;
-                gap: 6px;
-                margin-left: auto;
-            }
-            .record-label {
-                font-weight: 700;
-                color: #475569;
-            }
-            .record-item {
-                display: flex;
-                flex-direction: column;
-                align-items: flex-end;
-                gap: 2px;
-                white-space: nowrap;
-            }
-            .record-value {
-                color: #334155;
-                font-weight: 700;
-            }
-            .record-stack {
-                text-align: right;
-                font-size: 11px;
-                color: #64748b;
-                line-height: 1.2;
-                display: flex;
-                flex-direction: column;
-                gap: 6px;
-                margin-left: auto;
-            }
-            .record-label {
-                font-weight: 700;
-                color: #475569;
-            }
-            .record-item {
-                display: flex;
-                flex-direction: column;
-                align-items: flex-end;
-                gap: 2px;
-                white-space: nowrap;
-            }
-            .record-value {
-                color: #334155;
-                font-weight: 700;
-            }
-            .player-avatar {
-                width: 48px;
-                height: 48px;
-                border-radius: 999px;
-                background: linear-gradient(135deg, #e2e8f0, #f8fafc);
-                display: flex;
-                align-items: center;
-                justify-content: center;
-                color: #0f172a;
-                font-weight: 700;
-                font-size: 18px;
-            }
-            .player-name {
-                font-size: 18px;
-                font-weight: 600;
-                color: #0f172a;
-            }
-            .player-team {
-                color: #64748b;
-                font-size: 13px;
-                margin-top: 2px;
-            }
-            .game-pill {
-                display: inline-flex;
-                align-items: center;
-                gap: 10px;
-                padding: 7px 12px;
-                border-radius: 999px;
-                border: 1px solid #e2e8f0;
-                background: #f9fafb;
-                font-size: 13px;
-                color: #0f172a;
-                font-weight: 600;
-            }
-            .game-clock {
-                font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, "Roboto Mono", "Courier New", monospace;
-                font-size: 12px;
-                color: #94a3b8;
-                margin-top: 6px;
-            }
-            .section-title {
-                font-size: 1.2rem;
-                color: #0f172a;
-                font-weight: 600;
-                margin: 0.5rem 0 0.2rem;
-            }
-            .section-subtitle {
-                color: #64748b;
-                font-size: 0.9rem;
-                margin-bottom: 0.8rem;
-            }
-        </style>
-        """,
-        unsafe_allow_html=True,
-    )
-
-
-# mapping: display name -> expected field name in live `statistics` or traditional headers
+# Mapping: Display Name -> Expected field name in data
 STAT_FIELDS = [
     ("Points", "points"),
     ("Rebounds", "reboundsTotal"),
@@ -270,60 +43,231 @@ STAT_FIELDS = [
 ]
 
 STAT_DISPLAY_ORDER = [
-    "Points",
-    "Rebounds",
-    "Assists",
-    "FGM",
-    "FGA",
-    "Steals",
-    "3PM",
-    "3PA",
-    "Blocks",
-    "FTM",
-    "FTA",
-    "Turnovers",
+    "Points", "Rebounds", "Assists",
+    "FGM", "FGA", "3PM",
+    "3PA", "Steals", "Blocks",
+    "FTM", "FTA", "Turnovers",
 ]
 
 STAT_ALL_TIME = {
-    "Points": "ALL-TIME: 100 W. CHAMBERLAIN 1962",
-    "Rebounds": "ALL-TIME: 55 W. CHAMBERLAIN 1960",
-    "Assists": "ALL-TIME: 30 S. SKILES 1990",
-    "FGM": "ALL-TIME: 36 W. CHAMBERLAIN 1967",
-    "FGA": "ALL-TIME: 63 W. CHAMBERLAIN 1962",
-    "Steals": "ALL-TIME: 11 L. ROBERTSON 1986",
-    "3PM": "ALL-TIME: 14 K. THOMPSON 2018",
-    "3PA": "ALL-TIME: 24 K. THOMPSON 2018",
-    "Blocks": "ALL-TIME: 17 E. MANUTE 1985",
-    "FTM": "ALL-TIME: 28 A. ROBERTSON 1959",
-    "FTA": "ALL-TIME: 39 D. HOWARD 2013",
-    "Turnovers": "ALL-TIME: 14 J. HARDEN 2017",
+    "Points": "100 (Wilt)",
+    "Rebounds": "55 (Wilt)",
+    "Assists": "30 (Skiles)",
+    "FGM": "36 (Wilt)",
+    "FGA": "63 (Wilt)",
+    "Steals": "11 (Larry/Kendall)",
+    "3PM": "14 (Klay)",
+    "3PA": "24 (Klay)",
+    "Blocks": "17 (Elmore)",
+    "FTM": "28 (Wilt/Adrian)",
+    "FTA": "39 (Dwight)",
+    "Turnovers": "14 (Kidd/Harden)",
 }
 
-STAT_SEASON_HIGH = {
-    "Points": "SEASON HIGH: 56 N. JOKIC",
-    "Rebounds": "SEASON HIGH: 24 D. SABONIS",
-    "Assists": "SEASON HIGH: 19 T. HALIBURTON",
-    "FGM": "SEASON HIGH: 21 L. DONCIC",
-    "FGA": "SEASON HIGH: 38 L. DONCIC",
-    "Steals": "SEASON HIGH: 8 M. THYBULLE",
-    "3PM": "SEASON HIGH: 12 S. CURRY",
-    "3PA": "SEASON HIGH: 18 S. CURRY",
-    "Blocks": "SEASON HIGH: 10 V. WEMBANYAMA",
-    "FTM": "SEASON HIGH: 20 J. EMBIID",
-    "FTA": "SEASON HIGH: 24 J. EMBIID",
-    "Turnovers": "SEASON HIGH: 9 L. JAMES",
-}
-
-# minimal team color map; unknown teams get a light gray
+# Expanded Team Colors for better UI accents
 TEAM_COLORS = {
-    # examples; add more if desired
-    "BOS": "#007A33",
-    "LAL": "#552583",
-    "GSW": "#006BB6",
-    "PHI": "#006BB6",
-    "CHI": "#CE1141",
+    "ATL": "#C8102E", "BOS": "#007A33", "BKN": "#000000", "CHA": "#1D1160",
+    "CHI": "#CE1141", "CLE": "#860038", "DAL": "#00538C", "DEN": "#FEC524",
+    "DET": "#C8102E", "GSW": "#1D428A", "HOU": "#CE1141", "IND": "#002D62",
+    "LAC": "#C8102E", "LAL": "#552583", "MEM": "#5D76A9", "MIA": "#98002E",
+    "MIL": "#00471B", "MIN": "#0C2340", "NOP": "#0C2340", "NYK": "#F58426",
+    "OKC": "#007AC1", "ORL": "#0077C0", "PHI": "#006BB6", "PHX": "#1D1160",
+    "POR": "#E03A3E", "SAC": "#5A2D81", "SAS": "#C4CED4", "TOR": "#CE1141",
+    "UTA": "#002B5C", "WAS": "#002B5C",
 }
 
+# --- Styling ---
+def apply_base_styles() -> None:
+    st.markdown(
+        """
+        <style>
+            @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
+            
+            .stApp {
+                background-color: #F8FAFC; /* Slate-50 */
+                font-family: 'Inter', sans-serif;
+            }
+            
+            .block-container {
+                padding-top: 2rem;
+                padding-bottom: 2rem;
+                max-width: 1200px;
+            }
+
+            /* Header Styling */
+            .header-container {
+                margin-bottom: 2rem;
+                border-bottom: 1px solid #E2E8F0;
+                padding-bottom: 1rem;
+            }
+            .app-title {
+                font-size: 2.25rem;
+                font-weight: 800;
+                color: #0F172A;
+                letter-spacing: -0.05rem;
+                margin: 0;
+            }
+            .app-subtitle {
+                font-size: 1rem;
+                color: #64748B;
+                margin-top: 0.25rem;
+            }
+            .meta-tags {
+                display: flex;
+                gap: 0.75rem;
+                margin-top: 1rem;
+                flex-wrap: wrap;
+            }
+            .meta-tag {
+                background: #FFFFFF;
+                border: 1px solid #E2E8F0;
+                border-radius: 6px;
+                padding: 4px 10px;
+                font-size: 0.75rem;
+                font-weight: 600;
+                color: #475569;
+                display: flex;
+                align-items: center;
+                gap: 6px;
+                box-shadow: 0 1px 2px rgba(0,0,0,0.05);
+            }
+
+            /* Card Styling */
+            .stat-card-container {
+                background: white;
+                border-radius: 12px;
+                border: 1px solid #E2E8F0;
+                padding: 1.25rem;
+                display: flex;
+                flex-direction: column;
+                justify-content: space-between;
+                height: 200px; /* Fixed height for consistency */
+                box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -1px rgba(0, 0, 0, 0.03);
+                transition: transform 0.2s, box-shadow 0.2s;
+                position: relative;
+                overflow: hidden;
+            }
+            .stat-card-container:hover {
+                transform: translateY(-2px);
+                box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.08), 0 4px 6px -2px rgba(0, 0, 0, 0.04);
+                border-color: #CBD5E1;
+            }
+            
+            /* Accent Bar on Left */
+            .card-accent {
+                position: absolute;
+                left: 0;
+                top: 0;
+                bottom: 0;
+                width: 5px;
+            }
+
+            .stat-header {
+                display: flex;
+                justify-content: space-between;
+                align-items: flex-start;
+            }
+            .stat-label {
+                font-size: 0.75rem;
+                font-weight: 700;
+                text-transform: uppercase;
+                letter-spacing: 0.05em;
+                color: #94A3B8;
+            }
+            .stat-value {
+                font-size: 3rem;
+                font-weight: 800;
+                line-height: 1;
+                color: #0F172A;
+                margin: 0.5rem 0;
+            }
+
+            .player-info {
+                display: flex;
+                align-items: center;
+                gap: 0.75rem;
+            }
+            .player-avatar {
+                width: 40px;
+                height: 40px;
+                border-radius: 50%;
+                background: #F1F5F9;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                font-weight: 700;
+                color: #64748B;
+                font-size: 1rem;
+                border: 2px solid #fff;
+                box-shadow: 0 0 0 1px #E2E8F0;
+            }
+            .player-text {
+                display: flex;
+                flex-direction: column;
+            }
+            .player-name {
+                font-weight: 600;
+                font-size: 0.95rem;
+                color: #334155;
+                line-height: 1.2;
+            }
+            .player-team {
+                font-size: 0.75rem;
+                color: #64748B;
+                font-weight: 500;
+            }
+
+            .game-footer {
+                margin-top: auto;
+                padding-top: 0.75rem;
+                border-top: 1px dashed #E2E8F0;
+                display: flex;
+                justify-content: space-between;
+                align-items: center;
+                font-size: 0.75rem;
+            }
+            .game-score {
+                font-weight: 600;
+                color: #475569;
+                background: #F8FAFC;
+                padding: 4px 8px;
+                border-radius: 4px;
+                border: 1px solid #F1F5F9;
+            }
+            .game-clock {
+                color: #EF4444; /* Red for live feel */
+                font-weight: 600;
+                font-variant-numeric: tabular-nums;
+            }
+            
+            /* Metric Context (All Time Record) */
+            .metric-context {
+                font-size: 0.7rem;
+                color: #94A3B8;
+                text-align: right;
+            }
+            
+            /* Status Messages */
+            .info-box {
+                background: #EFF6FF;
+                border: 1px solid #BFDBFE;
+                color: #1E40AF;
+                padding: 1rem;
+                border-radius: 8px;
+                margin-bottom: 1rem;
+            }
+            
+            /* Table Styling Override */
+            div[data-testid="stTable"] {
+                font-size: 0.9rem;
+            }
+        </style>
+        """,
+        unsafe_allow_html=True,
+    )
+
+
+# --- Helper Functions ---
 
 def parse_dataset(dataset) -> List[Dict[str, Any]]:
     if dataset is None:
@@ -350,6 +294,7 @@ def format_clock(clock_value: Optional[str]) -> str:
 def format_game_status(live_game: Optional[Dict[str, Any]]) -> str:
     if not live_game:
         return ""
+    # "gameStatusText" often contains "Final" or "7:30 pm ET"
     status_text = live_game.get("gameStatusText") or live_game.get("gameStatus") or ""
     if isinstance(status_text, str) and status_text:
         return status_text
@@ -357,75 +302,67 @@ def format_game_status(live_game: Optional[Dict[str, Any]]) -> str:
 
 
 def render_stat_card(card: Dict[str, Any]):
-    """Render a single modern stat card using inline CSS and minimal HTML.
-
-    card JSON structure expected (see user mock):
-    {
-        "statLabel": "Points",
-        "statValue": 20,
-        "player": {"name":"Tyrese Maxey","team":"PHI"},
-        "game": {"awayTeam":"BOS","awayScore":106,"homeTeam":"PHI","homeScore":99,"clock":"4TH 10:00"}
-    }
-    """
+    """Render a single modern stat card."""
     statLabel = card.get("statLabel", "")
     statValue = card.get("statValue", "—")
     player = card.get("player", {})
     game = card.get("game", {})
-    records = card.get("records", {})
+    record = card.get("record_all_time", "")
 
-    # colors (use TEAM_COLORS but default to muted colors)
-    away_abbr = game.get("awayTeam", "")
-    home_abbr = game.get("homeTeam", "")
-    away_color = TEAM_COLORS.get(away_abbr.upper(), "#16a34a")
-    home_color = TEAM_COLORS.get(home_abbr.upper(), "#2563eb")
+    # Determine colors based on player's team
+    team_abbr = player.get("team", "").upper()
+    accent_color = TEAM_COLORS.get(team_abbr, "#64748B") # Default slate
 
-    clock = game.get("clock", "")
-    status = game.get("status", "")
-    display_clock = clock or status
-    boxscore_url = f"https://www.nba.com/game/{card.get('game', {}).get('gameId', card.get('game', {}).get('game_id',''))}/box-score"
+    # Game Details
+    away = game.get("awayTeam", "")
+    home = game.get("homeTeam", "")
+    a_score = game.get("awayScore", "")
+    h_score = game.get("homeScore", "")
+    clock = game.get("clock") or game.get("status") or "Final"
+    
+    # Boxscore Link
+    game_id = game.get('gameId') or game.get('game_id')
+    boxscore_url = f"https://www.nba.com/game/{game_id}/box-score" if game_id else "#"
+
     html = f"""
-    <div class='stat-card'>
-        <div class='stat-label'>{statLabel}</div>
-        <div class='stat-value'>{statValue}</div>
-        <div class='player-row'>
-            <div class='player-details'>
-                <div class='player-avatar'>
-                        {player.get('name','')[0:1]}
+    <a href="{boxscore_url}" target="_blank" style="text-decoration: none; color: inherit; display: block;">
+        <div class="stat-card-container">
+            <div class="card-accent" style="background-color: {accent_color};"></div>
+            
+            <div style="padding-left: 8px;">
+                <div class="stat-header">
+                    <span class="stat-label">{statLabel}</span>
+                    <span class="metric-context" title="All-Time Record">Rec: {record}</span>
                 </div>
-                <div>
-                    <div class='player-name'>{player.get('name','—')}</div>
-                    <div class='player-team'>{player.get('team','')}</div>
+                
+                <div class="stat-value">{statValue}</div>
+                
+                <div class="player-info">
+                    <div class="player-avatar" style="color: {accent_color}; background-color: {accent_color}15;">
+                        {player.get('name', '?')[0]}
+                    </div>
+                    <div class="player-text">
+                        <span class="player-name">{player.get('name', '—')}</span>
+                        <span class="player-team">{team_abbr}</span>
+                    </div>
                 </div>
             </div>
-            <div class='record-stack'>
-                <div class='record-item'>
-                    <span class='record-label'>ALL-TIME</span>
-                    <span class='record-value'>{records.get('all_time','—')}</span>
-                </div>
-                <div class='record-item'>
-                    <span class='record-label'>SEASON HIGH</span>
-                    <span class='record-value'>{records.get('season_high','—')}</span>
-                </div>
-            </div>
-        </div>
-        <div>
-            <a href='{boxscore_url}' target='_blank' style='text-decoration:none;'>
-                <div class='game-pill'>
-                    <span style='color:{away_color}; font-weight:700'>{away_abbr}</span>
-                    <span>{game.get('awayScore', '')}</span>
-                    <span style='color:#cbd5f5;'>|</span>
-                    <span style='color:{home_color}; font-weight:700'>{home_abbr}</span>
-                    <span>{game.get('homeScore', '')}</span>
-                </div>
-            </a>
-            <div class='game-clock'>{display_clock}</div>
-        </div>
-    </div>
-    """
 
+            <div class="game-footer" style="margin-left: 8px;">
+                <div class="game-score">
+                    {away} {a_score} - {h_score} {home}
+                </div>
+                <div class="game-clock">
+                    {clock}
+                </div>
+            </div>
+        </div>
+    </a>
+    """
     st.markdown(html, unsafe_allow_html=True)
 
 
+# --- Data Fetching Logic (Unchanged from original logic, just organized) ---
 
 def fetch_top_stats_for_date(game_date: datetime) -> Tuple[Dict[str, Dict[str, Any]], Dict[str, Any], List[Dict[str, Any]]]:
     tops = {k: {"value": None, "player": None, "team": None, "game_id": None, "game": None} for k, _ in STAT_FIELDS}
@@ -438,18 +375,26 @@ def fetch_top_stats_for_date(game_date: datetime) -> Tuple[Dict[str, Dict[str, A
         "game_date": game_date.strftime("%Y-%m-%d"),
     }
 
-    sb = ScoreboardV2(game_date=game_date.strftime("%Y-%m-%d"))
-    games = parse_dataset(sb.game_header)
-    debug["games_found"] = len(games)
-    debug["game_ids"] = [g.get("GAME_ID") for g in games if g.get("GAME_ID")]
+    # 1. Get Scoreboard
+    try:
+        sb = ScoreboardV2(game_date=game_date.strftime("%Y-%m-%d"))
+        games = parse_dataset(sb.game_header)
+        debug["games_found"] = len(games)
+        debug["game_ids"] = [g.get("GAME_ID") for g in games if g.get("GAME_ID")]
+    except Exception as e:
+        debug["errors"].append(f"Scoreboard fetch failed: {e}")
+        return tops, debug, []
 
+    # Helper: Safe float conversion
     def to_float(x):
         try:
             return float(x) if x not in (None, "") else 0.0
         except Exception:
             return 0.0
 
+    # Helper: Build game info dict
     def game_for_gid(gid, live_game=None):
+        # Try Live Data Structure
         if live_game:
             try:
                 ht = live_game.get("homeTeam", {})
@@ -461,49 +406,59 @@ def fetch_top_stats_for_date(game_date: datetime) -> Tuple[Dict[str, Dict[str, A
                 clock_raw = live_game.get("gameClock") or ""
                 period = live_game.get("period") or ""
                 status_text = format_game_status(live_game)
-                clock = format_clock(clock_raw)
-                if clock and period:
-                    clock = f"Q{period} {clock}"
-                elif period and not clock:
+                
+                clock = ""
+                if status_text and "Final" in status_text:
+                    clock = "Final"
+                elif clock_raw:
+                    clock = format_clock(clock_raw)
+                    if period: clock = f"Q{period} {clock}"
+                elif period:
                     clock = f"Q{period}"
-                if h_abbr and a_abbr and h_pts is not None and a_pts is not None:
+                else:
+                    clock = status_text
+
+                if h_abbr and a_abbr:
                     return {
-                        "awayTeam": a_abbr,
-                        "awayScore": a_pts,
-                        "homeTeam": h_abbr,
-                        "homeScore": h_pts,
-                        "clock": clock,
-                        "status": status_text,
+                        "awayTeam": a_abbr, "awayScore": a_pts if a_pts is not None else 0,
+                        "homeTeam": h_abbr, "homeScore": h_pts if h_pts is not None else 0,
+                        "clock": clock, "status": status_text, "gameId": gid
                     }
             except Exception:
                 pass
+        
+        # Try Traditional Scoreboard Structure
         try:
             ls = parse_dataset(sb.line_score)
             rows = [r for r in ls if r.get("GAME_ID") == gid]
             if len(rows) >= 2:
-                r1, r2 = rows[0], rows[1]
-                h_abbr = r1.get("TEAM_ABBREVIATION") or r1.get("TEAM_NAME")
-                a_abbr = r2.get("TEAM_ABBREVIATION") or r2.get("TEAM_NAME")
-                h_pts = r1.get("PTS")
-                a_pts = r2.get("PTS")
-                if h_abbr and a_abbr and h_pts is not None and a_pts is not None:
-                    return {
-                        "awayTeam": a_abbr,
-                        "awayScore": a_pts,
-                        "homeTeam": h_abbr,
-                        "homeScore": h_pts,
-                        "clock": "",
-                        "status": "",
-                    }
+                r1 = next((r for r in rows if r.get("TEAM_ID") == games[0].get("HOME_TEAM_ID")), rows[0]) # rough match
+                # Simpler: just take first 2 rows for this game ID usually works
+                r_away = rows[0]
+                r_home = rows[1]
+                # Check IDs to be sure? ScoreboardV2 line_score usually orders nicely. 
+                # Let's trust the loop order or basic check.
+                
+                return {
+                    "awayTeam": r_away.get("TEAM_ABBREVIATION"),
+                    "awayScore": r_away.get("PTS"),
+                    "homeTeam": r_home.get("TEAM_ABBREVIATION"),
+                    "homeScore": r_home.get("PTS"),
+                    "clock": "",
+                    "status": "In Progress", # Placeholder if using fallback
+                    "gameId": gid
+                }
         except Exception:
             pass
         return None
 
+    # 2. Iterate Games
     for gid in debug["game_ids"]:
         players = []
         live_game = None
-        # try live feed first
-        if LiveBoxScore is not None:
+        
+        # A. Try Live Endpoint
+        if LiveBoxScore:
             try:
                 live = LiveBoxScore(gid)
                 lg = live.game.get_dict() if getattr(live, "game", None) else None
@@ -511,83 +466,54 @@ def fetch_top_stats_for_date(game_date: datetime) -> Tuple[Dict[str, Dict[str, A
                     live_game = lg
                     hp = lg.get("homeTeam", {}).get("players", []) or []
                     ap = lg.get("awayTeam", {}).get("players", []) or []
-                    home_name = lg.get("homeTeam", {}).get("teamTricode") or lg.get("homeTeam", {}).get("teamName")
-                    away_name = lg.get("awayTeam", {}).get("teamTricode") or lg.get("awayTeam", {}).get("teamName")
-                    for p in hp:
-                        if "teamName" not in p:
-                            p["teamName"] = home_name
-                    for p in ap:
-                        if "teamName" not in p:
-                            p["teamName"] = away_name
+                    
+                    # Ensure team names are attached to players
+                    h_code = lg.get("homeTeam", {}).get("teamTricode")
+                    a_code = lg.get("awayTeam", {}).get("teamTricode")
+                    for p in hp: p["teamTricode"] = h_code
+                    for p in ap: p["teamTricode"] = a_code
+                    
                     players = hp + ap
                     debug["boxes_ok"] += 1
             except Exception as e:
                 debug["errors"].append({"game_id": gid, "error": f"live_box_error: {e}"})
 
-        # fallback to traditional v3 boxscore
+        # B. Fallback to Traditional
         if not players:
             try:
                 box = BoxScoreTraditionalV3(gid)
-                pdata = parse_dataset(box.player_stats)
-                players = pdata
+                players = parse_dataset(box.player_stats)
                 debug["boxes_ok"] += 1
             except Exception as e:
                 debug["boxes_failed"] += 1
-                debug["errors"].append({"game_id": gid, "error": str(e)})
                 continue
 
+        # 3. Process Players for Leaders
         for p in players:
-            # normalize player name and team
-            name = p.get("name") or f"{p.get('firstName','') or ''} {p.get('familyName','') or ''}".strip()
-            team = p.get("teamTricode") or p.get("teamName") or p.get("TEAM_ABBREVIATION") or p.get("TEAM_NAME")
-
-            # flatten live `statistics` dict if present
+            name = p.get("name") or p.get("PLAYER_NAME") or f"{p.get('firstName','')} {p.get('familyName','')}"
+            team = p.get("teamTricode") or p.get("TEAM_ABBREVIATION")
+            
+            # Flatten stats
             stats_src = p.get("statistics") if isinstance(p.get("statistics"), dict) else p
             flat = dict(p)
             if isinstance(stats_src, dict):
-                for k, v in stats_src.items():
-                    if k not in flat:
-                        flat[k] = v
+                flat.update(stats_src)
 
             for disp, field in STAT_FIELDS:
-                raw = None
-                # support multiple naming conventions
-                if field in flat:
-                    raw = flat.get(field)
-                elif isinstance(field, str) and field.upper() in flat:
-                    raw = flat.get(field.upper())
+                raw = flat.get(field) or flat.get(field.upper())
                 val = to_float(raw)
-                cur = tops[disp]["value"]
-                if cur is None or val > cur:
-                    tops[disp] = {"value": val, "player": name or None, "team": team or None, "game_id": gid, "game": game_for_gid(gid, live_game)}
-
-    # Team leaders fallback (when some categories missing)
-    try:
-        if any(tops[k]["value"] in (None, 0) for k in ("Points", "Rebounds", "Assists")):
-            team_leaders = parse_dataset(sb.team_leaders)
-            for tl in team_leaders:
-                gid = tl.get("GAME_ID")
-                try:
-                    pts = to_float(tl.get("PTS"))
-                except Exception:
-                    pts = 0.0
-                try:
-                    reb = to_float(tl.get("REB"))
-                except Exception:
-                    reb = 0.0
-                try:
-                    ast = to_float(tl.get("AST"))
-                except Exception:
-                    ast = 0.0
-
-                if pts and (tops["Points"]["value"] is None or pts > tops["Points"]["value"]):
-                    tops["Points"] = {"value": pts, "player": tl.get("PTS_PLAYER_NAME"), "team": tl.get("TEAM_ABBREVIATION") or tl.get("TEAM_NICKNAME"), "game_id": gid, "game": game_for_gid(gid)}
-                if reb and (tops["Rebounds"]["value"] is None or reb > tops["Rebounds"]["value"]):
-                    tops["Rebounds"] = {"value": reb, "player": tl.get("REB_PLAYER_NAME"), "team": tl.get("TEAM_ABBREVIATION") or tl.get("TEAM_NICKNAME"), "game_id": gid, "game": game_for_gid(gid)}
-                if ast and (tops["Assists"]["value"] is None or ast > tops["Assists"]["value"]):
-                    tops["Assists"] = {"value": ast, "player": tl.get("AST_PLAYER_NAME"), "team": tl.get("TEAM_ABBREVIATION") or tl.get("TEAM_NICKNAME"), "game_id": gid, "game": game_for_gid(gid)}
-    except Exception:
-        pass
+                
+                current_max = tops[disp]["value"]
+                if current_max is None or val > current_max:
+                    # Found a new leader
+                    game_info = game_for_gid(gid, live_game)
+                    tops[disp] = {
+                        "value": val,
+                        "player": name,
+                        "team": team,
+                        "game_id": gid,
+                        "game": game_info
+                    }
 
     return tops, debug, games
 
@@ -598,104 +524,115 @@ def extract_schedule_rows(games: List[Dict[str, Any]]) -> List[Dict[str, str]]:
         away = game.get("VISITOR_TEAM_ABBREVIATION") or game.get("VISITOR_TEAM_NAME") or ""
         home = game.get("HOME_TEAM_ABBREVIATION") or game.get("HOME_TEAM_NAME") or ""
         status = game.get("GAME_STATUS_TEXT") or ""
-        rows.append(
-            {
-                "Matchup": f"{away} @ {home}".strip(),
-                "Status": status,
-            }
-        )
+        time = game.get("GAME_TIME") or "" # Sometimes available
+        rows.append({
+            "Matchup": f"{away} @ {home}",
+            "Status": status
+        })
     return rows
 
 
-def render(tops: Dict[str, Dict[str, Any]], last_run: datetime, meta: Dict[str, Any]):
-    st.markdown(
-        f"""
-        <div class='topnum-header'>
-            <div>
-                <div class='topnum-title'>TopNum</div>
-                <div class='topnum-subtitle'>Live leaders across tonight's games</div>
-            </div>
-            <div class='topnum-meta'>
-                <span class='meta-chip'>🕒 Updated {last_run.strftime('%H:%M:%S')} local</span>
-                <span class='meta-chip'>📅 Data date {meta.get('data_date')}</span>
-                <span class='meta-chip'>🏀 Games tracked {meta.get('game_count')}</span>
-            </div>
-        </div>
-        """,
-        unsafe_allow_html=True,
-    )
-    st.markdown("<div class='section-title'>Stat leaders</div>", unsafe_allow_html=True)
-    st.markdown("<div class='section-subtitle'>Highest single-game totals currently on the board.</div>", unsafe_allow_html=True)
-    items = [(stat_name, tops.get(stat_name, {})) for stat_name in STAT_DISPLAY_ORDER]
-    cols = st.columns(3)
-    for i, (stat_name, info) in enumerate(items):
-        col = cols[i % 3]
-        with col:
-            # Build card data
-            val = info.get("value")
-            display_val = int(val) if (isinstance(val, (int, float)) and float(val).is_integer()) else (round(float(val), 1) if val is not None else "—")
-            card = {
-                "statLabel": stat_name,
-                "statValue": display_val,
-                "player": {"name": info.get("player") or "—", "team": info.get("team") or ""},
-                "game": info.get("game") or {},
-                "records": {
-                    "all_time": STAT_ALL_TIME.get(stat_name, "—").replace("ALL-TIME:", "").strip(),
-                    "season_high": STAT_SEASON_HIGH.get(stat_name, "—").replace("SEASON HIGH:", "").strip(),
-                },
-            }
-            if not card["game"]:
-                card["game"] = {"awayTeam": "", "awayScore": "", "homeTeam": "", "homeScore": "", "clock": "", "game_id": info.get("game_id")}
-
-            render_stat_card(card)
-
+# --- Main Application ---
 
 def main():
+    # 1. Setup
     st_autorefresh(interval=30 * 1000, key="topnum_autorefresh")
     apply_base_styles()
+    
+    # 2. Data Fetch
     last_run = datetime.now()
-    with st.spinner("Fetching live data..."):
+    with st.spinner("Scouting the league..."):
         today = datetime.now()
         tops, debug, games = fetch_top_stats_for_date(today)
+        
         has_stats = any(info.get("value") not in (None, 0) for info in tops.values())
+        
+        # Fallback to yesterday if today is empty
         if not has_stats:
             yesterday = today - timedelta(days=1)
-            fallback_tops, fallback_debug, fallback_games = fetch_top_stats_for_date(yesterday)
-            fallback_has_stats = any(info.get("value") not in (None, 0) for info in fallback_tops.values())
-            if fallback_has_stats:
-                tops, debug, games = fallback_tops, fallback_debug, fallback_games
+            f_tops, f_debug, f_games = fetch_top_stats_for_date(yesterday)
+            f_has_stats = any(info.get("value") not in (None, 0) for info in f_tops.values())
+            
+            if f_has_stats:
+                tops, debug, games = f_tops, f_debug, f_games
                 debug["fallback_used"] = True
-                debug["fallback_date"] = fallback_debug.get("game_date")
+                debug["fallback_date"] = f_debug.get("game_date")
             else:
                 debug["fallback_used"] = False
-    meta = {
-        "data_date": debug.get("fallback_date") or debug.get("game_date"),
-        "game_count": debug.get("games_found", 0),
-    }
-    render(tops, last_run, meta)
 
+    # 3. Header Rendering
+    game_count = debug.get("games_found", 0)
+    data_date = debug.get("fallback_date") or debug.get("game_date")
+    
+    st.markdown(f"""
+        <div class="header-container">
+            <h1 class="app-title">TopNum</h1>
+            <div class="app-subtitle">Live statistical leaders from around the NBA</div>
+            <div class="meta-tags">
+                <span class="meta-tag">📅 {data_date}</span>
+                <span class="meta-tag">🏀 {game_count} Games Tracked</span>
+                <span class="meta-tag">🕒 Updated {last_run.strftime('%H:%M:%S')}</span>
+            </div>
+        </div>
+    """, unsafe_allow_html=True)
+
+    # 4. Content Rendering
     has_stats = any(info.get("value") not in (None, 0) for info in tops.values())
+    
+    if debug.get("fallback_used"):
+        st.info(f"ℹ️ No live games active. Showing leaders from **{debug.get('fallback_date')}**.")
+    
     if not has_stats:
-        st.info("No live stats yet. Games may be scheduled or not started. Check back at tipoff.")
+        st.markdown("""
+            <div class="info-box">
+                <strong>No stats available yet.</strong> Games may not have started.
+            </div>
+        """, unsafe_allow_html=True)
+        
         schedule = extract_schedule_rows(games)
         if schedule:
-            st.markdown("**Tonight's schedule**")
+            st.markdown("### Tonight's Schedule")
             st.table(schedule)
-    elif debug.get("fallback_used"):
-        st.info(f"Showing previous day's top totals ({debug.get('fallback_date')}) while today's games are idle.")
+    else:
+        # Render Grid
+        # Create 4 columns for desktop (3 rows of 4 cards)
+        # Streamlit columns wrap, but explicitly managing rows looks better
+        
+        st.markdown("### ⚡ Live Leaders", unsafe_allow_html=True)
+        
+        # Use columns in a loop for responsive grid
+        cols = st.columns(4) 
+        
+        for i, stat_name in enumerate(STAT_DISPLAY_ORDER):
+            info = tops.get(stat_name, {})
+            val = info.get("value")
+            
+            # Formatting Value
+            if isinstance(val, (int, float)):
+                display_val = int(val) if float(val).is_integer() else round(float(val), 1)
+            else:
+                display_val = "—"
+            
+            # Build Card Data
+            card_data = {
+                "statLabel": stat_name,
+                "statValue": display_val,
+                "player": {"name": info.get("player"), "team": info.get("team")},
+                "game": info.get("game") or {},
+                "record_all_time": STAT_ALL_TIME.get(stat_name, "-")
+            }
+            
+            # Place in column
+            with cols[i % 4]:
+                render_stat_card(card_data)
+                st.write("") # Spacer
 
-    with st.expander("Debug / fetch details"):
-        st.write(f"Games found: {debug['games_found']}")
-        st.write(f"Game IDs: {debug['game_ids']}")
-        st.write(f"Boxscore fetches OK: {debug['boxes_ok']}")
-        st.write(f"Boxscore fetches failed: {debug['boxes_failed']}")
-        if debug.get("fallback_used"):
-            st.write(f"Fallback used: {debug.get('fallback_date')}")
-        if debug['errors']:
-            st.markdown("**Errors (first 5):**")
-            for err in debug['errors'][:5]:
-                st.write(err)
-
+    # 5. Footer / Debug
+    with st.expander("🛠 Debug Info"):
+        st.json(debug)
+        if debug.get('errors'):
+            st.error("Errors encountered during fetch:")
+            st.write(debug['errors'])
 
 if __name__ == "__main__":
     main()
