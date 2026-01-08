@@ -80,7 +80,8 @@ def apply_base_styles() -> None:
                 display: flex;
                 flex-direction: column;
                 gap: 10px;
-                min-height: 220px;
+                min-height: 210px;
+                height: 210px;
                 transition: transform 0.2s ease, box-shadow 0.2s ease;
                 width: 100%;
             }
@@ -107,6 +108,7 @@ def apply_base_styles() -> None:
                 gap: 12px;
                 justify-content: space-between;
                 flex-wrap: nowrap;
+                min-height: 56px;
             }
             .player-details {
                 display: flex;
@@ -143,6 +145,31 @@ def apply_base_styles() -> None:
             .record-value {
                 color: #334155;
                 font-weight: 600;
+            }
+            .record-stack {
+                text-align: right;
+                font-size: 11px;
+                color: #64748b;
+                line-height: 1.2;
+                display: flex;
+                flex-direction: column;
+                gap: 6px;
+                margin-left: auto;
+            }
+            .record-label {
+                font-weight: 700;
+                color: #475569;
+            }
+            .record-item {
+                display: flex;
+                flex-direction: column;
+                align-items: flex-end;
+                gap: 2px;
+                white-space: nowrap;
+            }
+            .record-value {
+                color: #334155;
+                font-weight: 700;
             }
             .record-stack {
                 text-align: right;
