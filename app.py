@@ -80,17 +80,18 @@ def apply_base_styles() -> None:
                 border: 1px solid #e2e8f0;
                 box-shadow: 0 8px 20px rgba(15, 23, 42, 0.06);
                 display: grid;
-                grid-template-rows: auto auto 1fr auto;
+                grid-template-rows: auto auto auto auto;
                 grid-template-areas:
                     "label"
                     "value"
                     "player"
                     "game";
                 gap: 12px;
-                min-height: 210px;
-                height: 210px;
+                min-height: 230px;
+                height: auto;
                 transition: transform 0.2s ease, box-shadow 0.2s ease;
                 width: 100%;
+                overflow: hidden;
             }
             .stat-card:hover {
                 transform: translateY(-4px);
@@ -123,7 +124,7 @@ def apply_base_styles() -> None:
                 grid-template-areas: "player records";
                 align-items: start;
                 gap: 12px;
-                min-height: 56px;
+                min-height: 60px;
             }
             .player-details {
                 display: flex;
@@ -146,6 +147,9 @@ def apply_base_styles() -> None:
                 border-radius: 12px;
                 padding: 8px 10px;
                 border: 1px solid #e2e8f0;
+                max-width: 160px;
+                align-self: flex-start;
+                box-sizing: border-box;
             }
             .record-header {
                 font-size: 10px;
@@ -208,7 +212,7 @@ def apply_base_styles() -> None:
                 align-items: flex-start;
                 justify-content: flex-end;
                 gap: 6px;
-                margin-top: auto;
+                margin-top: 0;
             }
             .game-pill {
                 display: inline-flex;
