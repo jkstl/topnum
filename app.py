@@ -73,13 +73,13 @@ def apply_base_styles() -> None:
             .stat-card {
                 font-family: "Inter", "Roboto", -apple-system, system-ui, sans-serif;
                 background: #ffffff;
-                padding: 20px;
+                padding: 18px;
                 border-radius: 18px;
                 border: 1px solid #e2e8f0;
                 box-shadow: 0 8px 20px rgba(15, 23, 42, 0.06);
                 display: flex;
                 flex-direction: column;
-                gap: 12px;
+                gap: 10px;
                 min-height: 220px;
                 transition: transform 0.2s ease, box-shadow 0.2s ease;
                 width: 100%;
@@ -106,6 +106,7 @@ def apply_base_styles() -> None:
                 align-items: center;
                 gap: 12px;
                 justify-content: space-between;
+                flex-wrap: wrap;
             }
             .player-details {
                 display: flex;
@@ -116,11 +117,25 @@ def apply_base_styles() -> None:
                 text-align: right;
                 font-size: 12px;
                 color: #64748b;
-                line-height: 1.3;
+                line-height: 1.2;
+                display: grid;
+                grid-template-columns: repeat(2, minmax(0, auto));
+                gap: 8px 18px;
             }
             .record-label {
                 font-weight: 700;
                 color: #475569;
+            }
+            .record-item {
+                display: flex;
+                flex-direction: column;
+                align-items: flex-end;
+                gap: 2px;
+                white-space: nowrap;
+            }
+            .record-value {
+                color: #334155;
+                font-weight: 600;
             }
             .player-avatar {
                 width: 48px;
@@ -148,10 +163,10 @@ def apply_base_styles() -> None:
                 display: inline-flex;
                 align-items: center;
                 gap: 10px;
-                padding: 8px 14px;
+                padding: 7px 12px;
                 border-radius: 999px;
                 border: 1px solid #e2e8f0;
-                background: #f8fafc;
+                background: #f9fafb;
                 font-size: 13px;
                 color: #0f172a;
                 font-weight: 600;
@@ -247,6 +262,7 @@ TEAM_COLORS = {
     "LAL": "#552583",
     "GSW": "#006BB6",
     "PHI": "#006BB6",
+    "CHI": "#CE1141",
 }
 
 
@@ -323,8 +339,14 @@ def render_stat_card(card: Dict[str, Any]):
                 </div>
             </div>
             <div class='record-stack'>
-                <div><span class='record-label'>ALL-TIME:</span> {records.get('all_time','—')}</div>
-                <div><span class='record-label'>SEASON HIGH:</span> {records.get('season_high','—')}</div>
+                <div class='record-item'>
+                    <span class='record-label'>ALL-TIME</span>
+                    <span class='record-value'>{records.get('all_time','—')}</span>
+                </div>
+                <div class='record-item'>
+                    <span class='record-label'>SEASON HIGH</span>
+                    <span class='record-value'>{records.get('season_high','—')}</span>
+                </div>
             </div>
         </div>
         <div>
