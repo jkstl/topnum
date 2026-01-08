@@ -1,6 +1,6 @@
 import re
 import streamlit as st
-from datetime import datetime
+from datetime import datetime, timedelta
 from typing import Tuple, Dict, Any, List, Optional
 
 from nba_api.stats.endpoints.scoreboardv2 import ScoreboardV2
@@ -246,11 +246,18 @@ def render_stat_card(card: Dict[str, Any]):
 
 
 
-def fetch_top_stats() -> Tuple[Dict[str, Dict[str, Any]], Dict[str, Any]]:
+def fetch_top_stats_for_date(game_date: datetime) -> Tuple[Dict[str, Dict[str, Any]], Dict[str, Any], List[Dict[str, Any]]]:
     tops = {k: {"value": None, "player": None, "team": None, "game_id": None, "game": None} for k in STAT_FIELDS}
-    debug = {"games_found": 0, "game_ids": [], "boxes_ok": 0, "boxes_failed": 0, "errors": []}
+    debug = {
+        "games_found": 0,
+        "game_ids": [],
+        "boxes_ok": 0,
+        "boxes_failed": 0,
+        "errors": [],
+        "game_date": game_date.strftime("%Y-%m-%d"),
+    }
 
-    sb = ScoreboardV2()
+    sb = ScoreboardV2(game_date=game_date.strftime("%Y-%m-%d"))
     games = parse_dataset(sb.game_header)
     debug["games_found"] = len(games)
     debug["game_ids"] = [g.get("GAME_ID") for g in games if g.get("GAME_ID")]
@@ -401,7 +408,22 @@ def fetch_top_stats() -> Tuple[Dict[str, Dict[str, Any]], Dict[str, Any]]:
     except Exception:
         pass
 
-    return tops, debug
+    return tops, debug, games
+
+
+def extract_schedule_rows(games: List[Dict[str, Any]]) -> List[Dict[str, str]]:
+    rows = []
+    for game in games:
+        away = game.get("VISITOR_TEAM_ABBREVIATION") or game.get("VISITOR_TEAM_NAME") or ""
+        home = game.get("HOME_TEAM_ABBREVIATION") or game.get("HOME_TEAM_NAME") or ""
+        status = game.get("GAME_STATUS_TEXT") or ""
+        rows.append(
+            {
+                "Matchup": f"{away} @ {home}".strip(),
+                "Status": status,
+            }
+        )
+    return rows
 
 
 def render(tops: Dict[str, Dict[str, Any]], last_run: datetime):
@@ -443,14 +465,38 @@ def main():
     apply_base_styles()
     last_run = datetime.now()
     with st.spinner("Fetching live data..."):
-        tops, debug = fetch_top_stats()
+        today = datetime.now()
+        tops, debug, games = fetch_top_stats_for_date(today)
+        has_stats = any(info.get("value") not in (None, 0) for info in tops.values())
+        if not has_stats:
+            yesterday = today - timedelta(days=1)
+            fallback_tops, fallback_debug, fallback_games = fetch_top_stats_for_date(yesterday)
+            fallback_has_stats = any(info.get("value") not in (None, 0) for info in fallback_tops.values())
+            if fallback_has_stats:
+                tops, debug, games = fallback_tops, fallback_debug, fallback_games
+                debug["fallback_used"] = True
+                debug["fallback_date"] = fallback_debug.get("game_date")
+            else:
+                debug["fallback_used"] = False
     render(tops, last_run)
+
+    has_stats = any(info.get("value") not in (None, 0) for info in tops.values())
+    if not has_stats:
+        st.info("No live stats yet. Games may be scheduled or not started. Check back at tipoff.")
+        schedule = extract_schedule_rows(games)
+        if schedule:
+            st.markdown("**Tonight's schedule**")
+            st.table(schedule)
+    elif debug.get("fallback_used"):
+        st.info(f"Showing previous day's top totals ({debug.get('fallback_date')}) while today's games are idle.")
 
     with st.expander("Debug / fetch details"):
         st.write(f"Games found: {debug['games_found']}")
         st.write(f"Game IDs: {debug['game_ids']}")
         st.write(f"Boxscore fetches OK: {debug['boxes_ok']}")
         st.write(f"Boxscore fetches failed: {debug['boxes_failed']}")
+        if debug.get("fallback_used"):
+            st.write(f"Fallback used: {debug.get('fallback_date')}")
         if debug['errors']:
             st.markdown("**Errors (first 5):**")
             for err in debug['errors'][:5]:
