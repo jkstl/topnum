@@ -175,6 +175,20 @@ def apply_base_styles() -> None:
                 color: #334155;
                 font-weight: 700;
                 font-size: 12px;
+                display: flex;
+                align-items: baseline;
+                gap: 4px;
+            }
+            .record-meta {
+                font-weight: 600;
+                font-size: 10px;
+                color: #64748b;
+                white-space: nowrap;
+                overflow: hidden;
+                text-overflow: ellipsis;
+                max-width: 120px;
+                display: inline-block;
+                vertical-align: baseline;
             }
             .player-avatar {
                 width: 48px;
@@ -310,7 +324,7 @@ STAT_ALL_TIME = {
 
 STAT_SEASON_HIGH = {
     "Points": "SEASON HIGH: 56 N. JOKIC",
-    "Rebounds": "SEASON HIGH: 24 D. SABONIS",
+    "Rebounds": "SEASON HIGH: 25 S. BARNES",
     "Assists": "SEASON HIGH: 19 T. HALIBURTON",
     "FGM": "SEASON HIGH: 21 L. DONCIC",
     "FGA": "SEASON HIGH: 38 L. DONCIC",
@@ -372,7 +386,8 @@ def format_record_value(value: str) -> str:
     if not match:
         return value
     number, rest = match.groups()
-    return f"<strong>{number}</strong>{rest}"
+    rest = rest or ""
+    return f"<strong>{number}</strong><span class='record-meta'>{rest}</span>"
 
 
 def render_stat_card(card: Dict[str, Any]):
