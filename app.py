@@ -453,6 +453,17 @@ def render_stat_card(card: Dict[str, Any]):
     status = game.get("status", "")
     display_clock = clock or status
     boxscore_url = f"https://www.nba.com/game/{card.get('game', {}).get('gameId', card.get('game', {}).get('game_id',''))}/box-score"
+    season_prob = probability.get("season_high")
+    all_time_prob = probability.get("all_time")
+    probability_html = ""
+    if season_prob is not None or all_time_prob is not None:
+        parts = []
+        if season_prob is not None:
+            parts.append(f"<div class='probability-note'>Break season high: {season_prob:.1%}</div>")
+        if all_time_prob is not None:
+            parts.append(f"<div class='probability-note'>Break all-time: {all_time_prob:.2%}</div>")
+        probability_html = "\n".join(parts)
+
     html = f"""
     <div class='stat-card'>
         <div class='stat-label'>{statLabel}</div>
@@ -490,8 +501,7 @@ def render_stat_card(card: Dict[str, Any]):
                 </div>
             </a>
             <div class='game-clock'>{display_clock}</div>
-            {probability.get('season_high', '')}
-            {probability.get('all_time', '')}
+            {probability_html}
         </div>
     </div>
     """
@@ -769,11 +779,9 @@ def render(tops: Dict[str, Dict[str, Any]], last_run: datetime, meta: Dict[str, 
                     season_high=season_high,
                     all_time_high=all_time_high,
                 )
-                season_pct = f"{probabilities['season_high'] * 100:.1f}%"
-                all_time_pct = f"{probabilities['all_time'] * 100:.2f}%"
                 card["probability"] = {
-                    "season_high": f"<div class='probability-note'>Break season high: {season_pct}</div>",
-                    "all_time": f"<div class='probability-note'>Break all-time: {all_time_pct}</div>",
+                    "season_high": probabilities["season_high"],
+                    "all_time": probabilities["all_time"],
                 }
 
         render_stat_card(card)
