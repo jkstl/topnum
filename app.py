@@ -511,8 +511,13 @@ def fetch_top_stats_for_date(game_date: datetime) -> Tuple[Dict[str, Dict[str, A
         "game_date": game_date.strftime("%Y-%m-%d"),
     }
 
-    sb = ScoreboardV2(game_date=game_date.strftime("%Y-%m-%d"))
-    games = parse_dataset(sb.game_header)
+    try:
+        sb = ScoreboardV2(game_date=game_date.strftime("%Y-%m-%d"))
+        games = parse_dataset(sb.game_header)
+    except Exception as exc:
+        debug["errors"].append({"game_id": None, "error": f"scoreboard_error: {exc}"})
+        return tops, debug, []
+
     debug["games_found"] = len(games)
     debug["game_ids"] = [g.get("GAME_ID") for g in games if g.get("GAME_ID")]
 
