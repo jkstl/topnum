@@ -365,6 +365,16 @@ def format_game_status(live_game: Optional[Dict[str, Any]]) -> str:
     return ""
 
 
+def format_record_value(value: str) -> str:
+    if not value:
+        return "—"
+    match = re.match(r"^(\d+)(.*)$", value.strip())
+    if not match:
+        return value
+    number, rest = match.groups()
+    return f"<strong>{number}</strong>{rest}"
+
+
 def render_stat_card(card: Dict[str, Any]):
     """Render a single modern stat card using inline CSS and minimal HTML.
 
@@ -410,11 +420,11 @@ def render_stat_card(card: Dict[str, Any]):
                 <div class='record-header'>Records</div>
                 <div class='record-item'>
                     <span class='record-label'>ALL-TIME</span>
-                    <span class='record-value'>{records.get('all_time','—')}</span>
+                    <span class='record-value'>{format_record_value(records.get('all_time','—'))}</span>
                 </div>
                 <div class='record-item'>
                     <span class='record-label'>SEASON HIGH</span>
-                    <span class='record-value'>{records.get('season_high','—')}</span>
+                    <span class='record-value'>{format_record_value(records.get('season_high','—'))}</span>
                 </div>
             </div>
         </div>
