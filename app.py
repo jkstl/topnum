@@ -5,6 +5,7 @@ from typing import Tuple, Dict, Any, List, Optional
 
 from nba_api.stats.endpoints.scoreboardv2 import ScoreboardV2
 from nba_api.stats.endpoints.boxscoretraditionalv3 import BoxScoreTraditionalV3
+from probability.points_model import estimate_break_probabilities
 try:
     from nba_api.live.nba.endpoints.boxscore import BoxScore as LiveBoxScore
 except Exception:
@@ -379,6 +380,40 @@ def format_game_status(live_game: Optional[Dict[str, Any]]) -> str:
     return ""
 
 
+def parse_minutes(value: Optional[str]) -> float:
+    if value is None:
+        return 0.0
+    if isinstance(value, (int, float)):
+        return float(value)
+    raw = str(value).strip()
+    if not raw:
+        return 0.0
+    if ":" in raw:
+        minutes, seconds = raw.split(":", 1)
+        try:
+            return float(minutes) + float(seconds) / 60.0
+        except ValueError:
+            return 0.0
+    match = re.match(r"PT(?:(\d+)M)?(?:(\d+(?:\.\d+)?)S)?", raw)
+    if match:
+        minutes = float(match.group(1) or 0)
+        seconds = float(match.group(2) or 0)
+        return minutes + seconds / 60.0
+    try:
+        return float(raw)
+    except ValueError:
+        return 0.0
+
+
+def parse_record_number(record: str) -> float:
+    if not record:
+        return 0.0
+    match = re.search(r"(\d+)", record)
+    if not match:
+        return 0.0
+    return float(match.group(1))
+
+
 def format_record_value(value: str) -> str:
     if not value:
         return "—"
@@ -406,6 +441,7 @@ def render_stat_card(card: Dict[str, Any]):
     player = card.get("player", {})
     game = card.get("game", {})
     records = card.get("records", {})
+    probability = card.get("probability", {})
 
     # colors (use TEAM_COLORS but default to muted colors)
     away_abbr = game.get("awayTeam", "")
@@ -454,7 +490,8 @@ def render_stat_card(card: Dict[str, Any]):
                 </div>
             </a>
             <div class='game-clock'>{display_clock}</div>
-            <div class='probability-note'>Est. odds coming soon</div>
+            {probability.get('season_high', '')}
+            {probability.get('all_time', '')}
         </div>
     </div>
     """
@@ -464,7 +501,7 @@ def render_stat_card(card: Dict[str, Any]):
 
 
 def fetch_top_stats_for_date(game_date: datetime) -> Tuple[Dict[str, Dict[str, Any]], Dict[str, Any], List[Dict[str, Any]]]:
-    tops = {k: {"value": None, "player": None, "team": None, "game_id": None, "game": None} for k, _ in STAT_FIELDS}
+    tops = {k: {"value": None, "player": None, "team": None, "game_id": None, "game": None, "minutes": 0.0} for k, _ in STAT_FIELDS}
     debug = {
         "games_found": 0,
         "game_ids": [],
@@ -576,6 +613,7 @@ def fetch_top_stats_for_date(game_date: datetime) -> Tuple[Dict[str, Dict[str, A
             # normalize player name and team
             name = p.get("name") or f"{p.get('firstName','') or ''} {p.get('familyName','') or ''}".strip()
             team = p.get("teamTricode") or p.get("teamName") or p.get("TEAM_ABBREVIATION") or p.get("TEAM_NAME")
+            minutes = parse_minutes(p.get("minutes") or p.get("MIN") or p.get("MINUTES"))
 
             # flatten live `statistics` dict if present
             stats_src = p.get("statistics") if isinstance(p.get("statistics"), dict) else p
@@ -595,7 +633,14 @@ def fetch_top_stats_for_date(game_date: datetime) -> Tuple[Dict[str, Dict[str, A
                 val = to_float(raw)
                 cur = tops[disp]["value"]
                 if cur is None or val > cur:
-                    tops[disp] = {"value": val, "player": name or None, "team": team or None, "game_id": gid, "game": game_for_gid(gid, live_game)}
+                    tops[disp] = {
+                        "value": val,
+                        "player": name or None,
+                        "team": team or None,
+                        "game_id": gid,
+                        "game": game_for_gid(gid, live_game),
+                        "minutes": minutes,
+                    }
 
     # Team leaders fallback (when some categories missing)
     try:
@@ -617,11 +662,32 @@ def fetch_top_stats_for_date(game_date: datetime) -> Tuple[Dict[str, Dict[str, A
                     ast = 0.0
 
                 if pts and (tops["Points"]["value"] is None or pts > tops["Points"]["value"]):
-                    tops["Points"] = {"value": pts, "player": tl.get("PTS_PLAYER_NAME"), "team": tl.get("TEAM_ABBREVIATION") or tl.get("TEAM_NICKNAME"), "game_id": gid, "game": game_for_gid(gid)}
+                    tops["Points"] = {
+                        "value": pts,
+                        "player": tl.get("PTS_PLAYER_NAME"),
+                        "team": tl.get("TEAM_ABBREVIATION") or tl.get("TEAM_NICKNAME"),
+                        "game_id": gid,
+                        "game": game_for_gid(gid),
+                        "minutes": 0.0,
+                    }
                 if reb and (tops["Rebounds"]["value"] is None or reb > tops["Rebounds"]["value"]):
-                    tops["Rebounds"] = {"value": reb, "player": tl.get("REB_PLAYER_NAME"), "team": tl.get("TEAM_ABBREVIATION") or tl.get("TEAM_NICKNAME"), "game_id": gid, "game": game_for_gid(gid)}
+                    tops["Rebounds"] = {
+                        "value": reb,
+                        "player": tl.get("REB_PLAYER_NAME"),
+                        "team": tl.get("TEAM_ABBREVIATION") or tl.get("TEAM_NICKNAME"),
+                        "game_id": gid,
+                        "game": game_for_gid(gid),
+                        "minutes": 0.0,
+                    }
                 if ast and (tops["Assists"]["value"] is None or ast > tops["Assists"]["value"]):
-                    tops["Assists"] = {"value": ast, "player": tl.get("AST_PLAYER_NAME"), "team": tl.get("TEAM_ABBREVIATION") or tl.get("TEAM_NICKNAME"), "game_id": gid, "game": game_for_gid(gid)}
+                    tops["Assists"] = {
+                        "value": ast,
+                        "player": tl.get("AST_PLAYER_NAME"),
+                        "team": tl.get("TEAM_ABBREVIATION") or tl.get("TEAM_NICKNAME"),
+                        "game_id": gid,
+                        "game": game_for_gid(gid),
+                        "minutes": 0.0,
+                    }
     except Exception:
         pass
 
@@ -680,9 +746,30 @@ def render(tops: Dict[str, Dict[str, Any]], last_run: datetime, meta: Dict[str, 
                 "all_time": STAT_ALL_TIME.get(stat_name, "—").replace("ALL-TIME:", "").strip(),
                 "season_high": STAT_SEASON_HIGH.get(stat_name, "—").replace("SEASON HIGH:", "").strip(),
             },
+            "probability": {},
         }
         if not card["game"]:
             card["game"] = {"awayTeam": "", "awayScore": "", "homeTeam": "", "homeScore": "", "clock": "", "game_id": info.get("game_id")}
+
+        if stat_name == "Points":
+            minutes_played = info.get("minutes") or 0.0
+            remaining_minutes = max(0.0, 48.0 - float(minutes_played))
+            season_high = parse_record_number(STAT_SEASON_HIGH.get("Points", "0"))
+            all_time_high = parse_record_number(STAT_ALL_TIME.get("Points", "0"))
+            if minutes_played > 0 and remaining_minutes > 0:
+                probabilities = estimate_break_probabilities(
+                    current_points=float(val or 0.0),
+                    minutes_played=float(minutes_played),
+                    remaining_minutes=remaining_minutes,
+                    season_high=season_high,
+                    all_time_high=all_time_high,
+                )
+                season_pct = f"{probabilities['season_high'] * 100:.1f}%"
+                all_time_pct = f"{probabilities['all_time'] * 100:.2f}%"
+                card["probability"] = {
+                    "season_high": f"<div class='probability-note'>Break season high: {season_pct}</div>",
+                    "all_time": f"<div class='probability-note'>Break all-time: {all_time_pct}</div>",
+                }
 
         render_stat_card(card)
     st.markdown("</div>", unsafe_allow_html=True)
