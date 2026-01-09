@@ -5,6 +5,7 @@ from typing import Tuple, Dict, Any, List, Optional
 
 from nba_api.stats.endpoints.scoreboardv2 import ScoreboardV2
 from nba_api.stats.endpoints.boxscoretraditionalv3 import BoxScoreTraditionalV3
+from probability.points_model import estimate_break_probabilities
 try:
     from nba_api.live.nba.endpoints.boxscore import BoxScore as LiveBoxScore
 except Exception:
@@ -33,13 +34,12 @@ def apply_base_styles() -> None:
                 padding-right: 2rem;
             }
             .topnum-header {
-                display: flex;
+                display: grid;
+                grid-template-columns: minmax(260px, 1fr) auto;
                 align-items: center;
-                justify-content: space-between;
                 margin-bottom: 1.5rem;
                 padding: 0.5rem 0.2rem;
-                flex-wrap: wrap;
-                gap: 12px;
+                gap: 16px;
             }
             .topnum-title {
                 font-size: 2rem;
@@ -56,19 +56,22 @@ def apply_base_styles() -> None:
                 display: flex;
                 gap: 8px;
                 flex-wrap: wrap;
+                justify-content: flex-end;
             }
             .meta-chip {
                 background: #ffffff;
                 border: 1px solid #e2e8f0;
                 border-radius: 999px;
-                padding: 0.35rem 0.8rem;
-                font-size: 0.78rem;
+                padding: 0.3rem 0.65rem;
+                font-size: 0.72rem;
                 color: #475569;
                 box-shadow: 0 4px 12px rgba(15, 23, 42, 0.06);
                 display: inline-flex;
                 align-items: center;
                 gap: 6px;
                 font-weight: 600;
+                max-width: 200px;
+                white-space: nowrap;
             }
             .stat-card {
                 font-family: "Inter", "Roboto", -apple-system, system-ui, sans-serif;
@@ -78,21 +81,27 @@ def apply_base_styles() -> None:
                 border: 1px solid #e2e8f0;
                 box-shadow: 0 8px 20px rgba(15, 23, 42, 0.06);
                 display: grid;
-                grid-template-rows: auto auto 1fr auto;
+                grid-template-rows: auto auto auto auto;
                 grid-template-areas:
                     "label"
                     "value"
                     "player"
                     "game";
                 gap: 12px;
-                min-height: 210px;
-                height: 210px;
+                min-height: 230px;
+                height: auto;
                 transition: transform 0.2s ease, box-shadow 0.2s ease;
                 width: 100%;
+                overflow: hidden;
             }
             .stat-card:hover {
                 transform: translateY(-4px);
                 box-shadow: 0 14px 26px rgba(15, 23, 42, 0.12);
+            }
+            .stat-grid {
+                display: grid;
+                grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+                gap: 16px;
             }
             .stat-label {
                 text-transform: uppercase;
@@ -116,7 +125,7 @@ def apply_base_styles() -> None:
                 grid-template-areas: "player records";
                 align-items: start;
                 gap: 12px;
-                min-height: 56px;
+                min-height: 60px;
             }
             .player-details {
                 display: flex;
@@ -135,10 +144,26 @@ def apply_base_styles() -> None:
                 gap: 6px;
                 margin-left: auto;
                 grid-area: records;
+                background: #f8fafc;
+                border-radius: 12px;
+                padding: 8px 10px;
+                border: 1px solid #e2e8f0;
+                max-width: 160px;
+                align-self: flex-start;
+                box-sizing: border-box;
+            }
+            .record-header {
+                font-size: 10px;
+                letter-spacing: 0.12em;
+                text-transform: uppercase;
+                color: #94a3b8;
+                font-weight: 700;
             }
             .record-label {
                 font-weight: 700;
                 color: #475569;
+                font-size: 10px;
+                letter-spacing: 0.08em;
             }
             .record-item {
                 display: flex;
@@ -150,6 +175,21 @@ def apply_base_styles() -> None:
             .record-value {
                 color: #334155;
                 font-weight: 700;
+                font-size: 12px;
+                display: flex;
+                align-items: baseline;
+                gap: 4px;
+            }
+            .record-meta {
+                font-weight: 600;
+                font-size: 10px;
+                color: #64748b;
+                white-space: nowrap;
+                overflow: hidden;
+                text-overflow: ellipsis;
+                max-width: 120px;
+                display: inline-block;
+                vertical-align: baseline;
             }
             .player-avatar {
                 width: 48px;
@@ -187,7 +227,7 @@ def apply_base_styles() -> None:
                 align-items: flex-start;
                 justify-content: flex-end;
                 gap: 6px;
-                margin-top: auto;
+                margin-top: 0;
             }
             .game-pill {
                 display: inline-flex;
@@ -207,6 +247,11 @@ def apply_base_styles() -> None:
                 color: #94a3b8;
                 margin-top: 0;
             }
+            .probability-note {
+                font-size: 11px;
+                color: #94a3b8;
+                font-weight: 600;
+            }
             .section-title {
                 font-size: 1.2rem;
                 color: #0f172a;
@@ -217,6 +262,14 @@ def apply_base_styles() -> None:
                 color: #64748b;
                 font-size: 0.9rem;
                 margin-bottom: 0.8rem;
+            }
+            @media (max-width: 900px) {
+                .topnum-header {
+                    grid-template-columns: 1fr;
+                }
+                .topnum-meta {
+                    justify-content: flex-start;
+                }
             }
         </style>
         """,
@@ -272,7 +325,7 @@ STAT_ALL_TIME = {
 
 STAT_SEASON_HIGH = {
     "Points": "SEASON HIGH: 56 N. JOKIC",
-    "Rebounds": "SEASON HIGH: 24 D. SABONIS",
+    "Rebounds": "SEASON HIGH: 25 S. BARNES",
     "Assists": "SEASON HIGH: 19 T. HALIBURTON",
     "FGM": "SEASON HIGH: 21 L. DONCIC",
     "FGA": "SEASON HIGH: 38 L. DONCIC",
@@ -327,6 +380,51 @@ def format_game_status(live_game: Optional[Dict[str, Any]]) -> str:
     return ""
 
 
+def parse_minutes(value: Optional[str]) -> float:
+    if value is None:
+        return 0.0
+    if isinstance(value, (int, float)):
+        return float(value)
+    raw = str(value).strip()
+    if not raw:
+        return 0.0
+    if ":" in raw:
+        minutes, seconds = raw.split(":", 1)
+        try:
+            return float(minutes) + float(seconds) / 60.0
+        except ValueError:
+            return 0.0
+    match = re.match(r"PT(?:(\d+)M)?(?:(\d+(?:\.\d+)?)S)?", raw)
+    if match:
+        minutes = float(match.group(1) or 0)
+        seconds = float(match.group(2) or 0)
+        return minutes + seconds / 60.0
+    try:
+        return float(raw)
+    except ValueError:
+        return 0.0
+
+
+def parse_record_number(record: str) -> float:
+    if not record:
+        return 0.0
+    match = re.search(r"(\d+)", record)
+    if not match:
+        return 0.0
+    return float(match.group(1))
+
+
+def format_record_value(value: str) -> str:
+    if not value:
+        return "—"
+    match = re.match(r"^(\d+)(.*)$", value.strip())
+    if not match:
+        return value
+    number, rest = match.groups()
+    rest = rest or ""
+    return f"<strong>{number}</strong><span class='record-meta'>{rest}</span>"
+
+
 def render_stat_card(card: Dict[str, Any]):
     """Render a single modern stat card using inline CSS and minimal HTML.
 
@@ -343,6 +441,7 @@ def render_stat_card(card: Dict[str, Any]):
     player = card.get("player", {})
     game = card.get("game", {})
     records = card.get("records", {})
+    probability = card.get("probability", {})
 
     # colors (use TEAM_COLORS but default to muted colors)
     away_abbr = game.get("awayTeam", "")
@@ -354,6 +453,17 @@ def render_stat_card(card: Dict[str, Any]):
     status = game.get("status", "")
     display_clock = clock or status
     boxscore_url = f"https://www.nba.com/game/{card.get('game', {}).get('gameId', card.get('game', {}).get('game_id',''))}/box-score"
+    season_prob = probability.get("season_high")
+    all_time_prob = probability.get("all_time")
+    probability_html = ""
+    if season_prob is not None or all_time_prob is not None:
+        parts = []
+        if season_prob is not None:
+            parts.append(f"<div class='probability-note'>Break season high: {season_prob:.1%}</div>")
+        if all_time_prob is not None:
+            parts.append(f"<div class='probability-note'>Break all-time: {all_time_prob:.2%}</div>")
+        probability_html = "\n".join(parts)
+
     html = f"""
     <div class='stat-card'>
         <div class='stat-label'>{statLabel}</div>
@@ -369,13 +479,14 @@ def render_stat_card(card: Dict[str, Any]):
                 </div>
             </div>
             <div class='record-stack'>
+                <div class='record-header'>Records</div>
                 <div class='record-item'>
                     <span class='record-label'>ALL-TIME</span>
-                    <span class='record-value'>{records.get('all_time','—')}</span>
+                    <span class='record-value'>{format_record_value(records.get('all_time','—'))}</span>
                 </div>
                 <div class='record-item'>
                     <span class='record-label'>SEASON HIGH</span>
-                    <span class='record-value'>{records.get('season_high','—')}</span>
+                    <span class='record-value'>{format_record_value(records.get('season_high','—'))}</span>
                 </div>
             </div>
         </div>
@@ -390,6 +501,7 @@ def render_stat_card(card: Dict[str, Any]):
                 </div>
             </a>
             <div class='game-clock'>{display_clock}</div>
+            {probability_html}
         </div>
     </div>
     """
@@ -399,7 +511,7 @@ def render_stat_card(card: Dict[str, Any]):
 
 
 def fetch_top_stats_for_date(game_date: datetime) -> Tuple[Dict[str, Dict[str, Any]], Dict[str, Any], List[Dict[str, Any]]]:
-    tops = {k: {"value": None, "player": None, "team": None, "game_id": None, "game": None} for k, _ in STAT_FIELDS}
+    tops = {k: {"value": None, "player": None, "team": None, "game_id": None, "game": None, "minutes": 0.0} for k, _ in STAT_FIELDS}
     debug = {
         "games_found": 0,
         "game_ids": [],
@@ -409,8 +521,13 @@ def fetch_top_stats_for_date(game_date: datetime) -> Tuple[Dict[str, Dict[str, A
         "game_date": game_date.strftime("%Y-%m-%d"),
     }
 
-    sb = ScoreboardV2(game_date=game_date.strftime("%Y-%m-%d"))
-    games = parse_dataset(sb.game_header)
+    try:
+        sb = ScoreboardV2(game_date=game_date.strftime("%Y-%m-%d"))
+        games = parse_dataset(sb.game_header)
+    except Exception as exc:
+        debug["errors"].append({"game_id": None, "error": f"scoreboard_error: {exc}"})
+        return tops, debug, []
+
     debug["games_found"] = len(games)
     debug["game_ids"] = [g.get("GAME_ID") for g in games if g.get("GAME_ID")]
 
@@ -511,6 +628,7 @@ def fetch_top_stats_for_date(game_date: datetime) -> Tuple[Dict[str, Dict[str, A
             # normalize player name and team
             name = p.get("name") or f"{p.get('firstName','') or ''} {p.get('familyName','') or ''}".strip()
             team = p.get("teamTricode") or p.get("teamName") or p.get("TEAM_ABBREVIATION") or p.get("TEAM_NAME")
+            minutes = parse_minutes(p.get("minutes") or p.get("MIN") or p.get("MINUTES"))
 
             # flatten live `statistics` dict if present
             stats_src = p.get("statistics") if isinstance(p.get("statistics"), dict) else p
@@ -530,7 +648,14 @@ def fetch_top_stats_for_date(game_date: datetime) -> Tuple[Dict[str, Dict[str, A
                 val = to_float(raw)
                 cur = tops[disp]["value"]
                 if cur is None or val > cur:
-                    tops[disp] = {"value": val, "player": name or None, "team": team or None, "game_id": gid, "game": game_for_gid(gid, live_game)}
+                    tops[disp] = {
+                        "value": val,
+                        "player": name or None,
+                        "team": team or None,
+                        "game_id": gid,
+                        "game": game_for_gid(gid, live_game),
+                        "minutes": minutes,
+                    }
 
     # Team leaders fallback (when some categories missing)
     try:
@@ -552,11 +677,32 @@ def fetch_top_stats_for_date(game_date: datetime) -> Tuple[Dict[str, Dict[str, A
                     ast = 0.0
 
                 if pts and (tops["Points"]["value"] is None or pts > tops["Points"]["value"]):
-                    tops["Points"] = {"value": pts, "player": tl.get("PTS_PLAYER_NAME"), "team": tl.get("TEAM_ABBREVIATION") or tl.get("TEAM_NICKNAME"), "game_id": gid, "game": game_for_gid(gid)}
+                    tops["Points"] = {
+                        "value": pts,
+                        "player": tl.get("PTS_PLAYER_NAME"),
+                        "team": tl.get("TEAM_ABBREVIATION") or tl.get("TEAM_NICKNAME"),
+                        "game_id": gid,
+                        "game": game_for_gid(gid),
+                        "minutes": 0.0,
+                    }
                 if reb and (tops["Rebounds"]["value"] is None or reb > tops["Rebounds"]["value"]):
-                    tops["Rebounds"] = {"value": reb, "player": tl.get("REB_PLAYER_NAME"), "team": tl.get("TEAM_ABBREVIATION") or tl.get("TEAM_NICKNAME"), "game_id": gid, "game": game_for_gid(gid)}
+                    tops["Rebounds"] = {
+                        "value": reb,
+                        "player": tl.get("REB_PLAYER_NAME"),
+                        "team": tl.get("TEAM_ABBREVIATION") or tl.get("TEAM_NICKNAME"),
+                        "game_id": gid,
+                        "game": game_for_gid(gid),
+                        "minutes": 0.0,
+                    }
                 if ast and (tops["Assists"]["value"] is None or ast > tops["Assists"]["value"]):
-                    tops["Assists"] = {"value": ast, "player": tl.get("AST_PLAYER_NAME"), "team": tl.get("TEAM_ABBREVIATION") or tl.get("TEAM_NICKNAME"), "game_id": gid, "game": game_for_gid(gid)}
+                    tops["Assists"] = {
+                        "value": ast,
+                        "player": tl.get("AST_PLAYER_NAME"),
+                        "team": tl.get("TEAM_ABBREVIATION") or tl.get("TEAM_NICKNAME"),
+                        "game_id": gid,
+                        "game": game_for_gid(gid),
+                        "minutes": 0.0,
+                    }
     except Exception:
         pass
 
@@ -596,29 +742,50 @@ def render(tops: Dict[str, Dict[str, Any]], last_run: datetime, meta: Dict[str, 
         unsafe_allow_html=True,
     )
     st.markdown("<div class='section-title'>Stat leaders</div>", unsafe_allow_html=True)
-    st.markdown("<div class='section-subtitle'>Highest single-game totals currently on the board.</div>", unsafe_allow_html=True)
+    st.markdown(
+        "<div class='section-subtitle'>Highest single-game totals currently on the board, alongside season and all-time marks.</div>",
+        unsafe_allow_html=True,
+    )
     items = [(stat_name, tops.get(stat_name, {})) for stat_name in STAT_DISPLAY_ORDER]
-    cols = st.columns(3)
+    st.markdown("<div class='stat-grid'>", unsafe_allow_html=True)
     for i, (stat_name, info) in enumerate(items):
-        col = cols[i % 3]
-        with col:
-            # Build card data
-            val = info.get("value")
-            display_val = int(val) if (isinstance(val, (int, float)) and float(val).is_integer()) else (round(float(val), 1) if val is not None else "—")
-            card = {
-                "statLabel": stat_name,
-                "statValue": display_val,
-                "player": {"name": info.get("player") or "—", "team": info.get("team") or ""},
-                "game": info.get("game") or {},
-                "records": {
-                    "all_time": STAT_ALL_TIME.get(stat_name, "—").replace("ALL-TIME:", "").strip(),
-                    "season_high": STAT_SEASON_HIGH.get(stat_name, "—").replace("SEASON HIGH:", "").strip(),
-                },
-            }
-            if not card["game"]:
-                card["game"] = {"awayTeam": "", "awayScore": "", "homeTeam": "", "homeScore": "", "clock": "", "game_id": info.get("game_id")}
+        # Build card data
+        val = info.get("value")
+        display_val = int(val) if (isinstance(val, (int, float)) and float(val).is_integer()) else (round(float(val), 1) if val is not None else "—")
+        card = {
+            "statLabel": stat_name,
+            "statValue": display_val,
+            "player": {"name": info.get("player") or "—", "team": info.get("team") or ""},
+            "game": info.get("game") or {},
+            "records": {
+                "all_time": STAT_ALL_TIME.get(stat_name, "—").replace("ALL-TIME:", "").strip(),
+                "season_high": STAT_SEASON_HIGH.get(stat_name, "—").replace("SEASON HIGH:", "").strip(),
+            },
+            "probability": {},
+        }
+        if not card["game"]:
+            card["game"] = {"awayTeam": "", "awayScore": "", "homeTeam": "", "homeScore": "", "clock": "", "game_id": info.get("game_id")}
 
-            render_stat_card(card)
+        if stat_name == "Points":
+            minutes_played = info.get("minutes") or 0.0
+            remaining_minutes = max(0.0, 48.0 - float(minutes_played))
+            season_high = parse_record_number(STAT_SEASON_HIGH.get("Points", "0"))
+            all_time_high = parse_record_number(STAT_ALL_TIME.get("Points", "0"))
+            if minutes_played > 0 and remaining_minutes > 0:
+                probabilities = estimate_break_probabilities(
+                    current_points=float(val or 0.0),
+                    minutes_played=float(minutes_played),
+                    remaining_minutes=remaining_minutes,
+                    season_high=season_high,
+                    all_time_high=all_time_high,
+                )
+                card["probability"] = {
+                    "season_high": probabilities["season_high"],
+                    "all_time": probabilities["all_time"],
+                }
+
+        render_stat_card(card)
+    st.markdown("</div>", unsafe_allow_html=True)
 
 
 def main():
